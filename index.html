@@ -581,18 +581,20 @@ main{flex:1;padding:36px 40px;max-width:1280px;margin:0 auto;width:100%}
     <div class="bulk-importer-title">📋 Paste Your Questions Below</div>
     <div class="bulk-importer-desc">Type or paste ALL your questions at once. Use this format — just put the <strong style="color:var(--success)">number of the correct option</strong> (1, 2, 3 or 4) at the end of each question. You can paste 100 questions in one go!</div>
     <div class="bulk-format-box"><span class="hl">1.</span> What is the powerhouse of the cell?
-<span class="hl">1)</span> Brain
-<span class="hl">2)</span> Mitochondria
-<span class="hl">3)</span> Nucleus
-<span class="hl">4)</span> Heart
+Brain
+Mitochondria
+Nucleus
+Heart
 <span class="hl2">Answer: 2</span>
 
 <span class="hl">2.</span> What gas do plants absorb?
-<span class="hl">1)</span> Oxygen
-<span class="hl">2)</span> Nitrogen
-<span class="hl">3)</span> Carbon Dioxide
-<span class="hl">4)</span> Hydrogen
-<span class="hl2">Answer: 3</span></div>
+Oxygen
+Nitrogen
+Carbon Dioxide
+Hydrogen
+<span class="hl2">Answer: 3</span>
+
+<span style="color:var(--muted)">— Works with or without 1) 2) 3) 4) in front of options —</span></div>
     <textarea class="bulk-textarea" id="bulk-input" placeholder="Paste your questions here...&#10;&#10;1. Question text here?&#10;1) Option one&#10;2) Option two&#10;3) Option three&#10;4) Option four&#10;Answer: 2&#10;&#10;2. Next question..."></textarea>
     <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
       <button class="btn btn-secondary" onclick="previewBulk()">👁 Preview Questions</button>
@@ -605,6 +607,24 @@ main{flex:1;padding:36px 40px;max-width:1280px;margin:0 auto;width:100%}
 </div>
 
 </main>
+</div>
+
+<!-- PRE QUIZ NAME MODAL -->
+<div class="modal-overlay" id="pre-quiz-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">Who is taking this quiz?</div>
+      <button class="modal-close" onclick="document.getElementById('pre-quiz-modal').classList.remove('open');activeQuiz=null">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:18px">Quiz: <strong id="pre-quiz-name" style="color:var(--text)"></strong></p>
+      <div class="form-group">
+        <label class="form-label">Select Your Name</label>
+        <select class="form-select" id="pre-player-select"><option value="">— Choose your name —</option></select>
+      </div>
+      <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center" onclick="beginQuiz()">Start Quiz →</button>
+    </div>
+  </div>
 </div>
 
 <!-- QUIZ MODAL -->
@@ -762,7 +782,7 @@ function renderMembers(){
 }
 function populateSelects(){
   const opts=MEMBERS.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
-  ['player-select','notice-author'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">— Select —</option>'+opts;});
+  ['player-select','notice-author','pre-player-select'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">— Choose —</option>'+opts;});
 }
 
 // ══════════════════════════════════════════
@@ -771,25 +791,70 @@ function populateSelects(){
 function parseBulk(text){
   const questions=[];
   const errors=[];
-  // Split by question numbers like "1." or "1)"
-  const blocks=text.trim().split(/\n(?=\d+[\.\)])/);
-  blocks.forEach((block,bi)=>{
-    const lines=block.trim().split('\n').map(l=>l.trim()).filter(l=>l);
-    if(!lines.length)return;
-    // Question text - first line (remove leading number)
-    const qText=lines[0].replace(/^\d+[\.\)]\s*/,'').trim();
-    if(!qText){errors.push(`Block ${bi+1}: Missing question text`);return;}
-    // Find options - lines starting with 1) 2) 3) 4) or A) B) C) D)
-    const optLines=lines.filter(l=>/^[1-4abcdABCD][\.\)]\s+/.test(l));
-    if(optLines.length<2){errors.push(`Q${bi+1} "${qText.slice(0,30)}...": Need at least 2 options`);return;}
-    const options=optLines.map(l=>l.replace(/^[1-4abcdABCD][\.\)]\s+/,'').trim());
-    // Find answer line
-    const ansLine=lines.find(l=>/^answer\s*[:=]\s*\d/i.test(l));
-    if(!ansLine){errors.push(`Q${bi+1} "${qText.slice(0,30)}...": Missing "Answer: N" line`);return;}
-    const ansNum=parseInt(ansLine.replace(/^answer\s*[:=]\s*/i,'').trim());
-    if(isNaN(ansNum)||ansNum<1||ansNum>options.length){errors.push(`Q${bi+1}: Answer number ${ansNum} is invalid (only ${options.length} options)`);return;}
-    questions.push({text:qText,options,correct:ansNum-1});
+  // Clean noise
+  const clean=text.replace(/\*\*/g,'').replace(/^-{2,}$/gm,'').replace(/^#{1,6}\s*/gm,'');
+  const lines=clean.split('\n').map(l=>l.trim()).filter(l=>l);
+
+  let blocks=[];
+  let i=0;
+  while(i<lines.length){
+    const l=lines[i];
+    // Question line: number > 4, OR number 1-4 but next lines look like options
+    const qm=l.match(/^(\d+)[.)]\s+(.+)/);
+    if(qm){
+      const num=parseInt(qm[1]);
+      const txt=qm[2].trim();
+      // Peek ahead to see if next non-empty lines look like options
+      let j=i+1;
+      let peekOpts=0;
+      while(j<lines.length && peekOpts<4){
+        const peek=lines[j];
+        if(!peek){j++;continue;}
+        if(/^[1-4abcdABCD][.)]\s+.+/i.test(peek)) peekOpts++;
+        else break;
+        j++;
+      }
+      // It's a question if number>4 OR peek found options after it
+      if(num>4 || peekOpts>=2){
+        // collect this block
+        let opts=[];
+        let ans=null;
+        let k=i+1;
+        while(k<lines.length){
+          const ol=lines[k];
+          if(!ol){k++;continue;}
+          // answer line
+          if(/^answer\s*[:=]\s*([1-4abcdABCD])/i.test(ol)){
+            const am=ol.match(/^answer\s*[:=]\s*([1-4abcdABCD])/i);
+            const av=am[1].toLowerCase();
+            ans=['a','b','c','d'].includes(av)?['a','b','c','d'].indexOf(av)+1:parseInt(av);
+            k++;
+            break;
+          }
+          // option line
+          const om=ol.match(/^[1-4abcdABCD][.)]\s+(.+)/i);
+          if(om){opts.push(om[1].trim());k++;continue;}
+          // next question starts
+          const nm=ol.match(/^(\d+)[.)]\s+.+/);
+          if(nm && (parseInt(nm[1])>4 || opts.length>=2)) break;
+          k++;
+        }
+        blocks.push({txt,opts,ans,endLine:k});
+        i=k;
+        continue;
+      }
+    }
+    i++;
+  }
+
+  blocks.forEach((b,idx)=>{
+    if(!b.txt){errors.push('Q'+(idx+1)+': no question text');return;}
+    if(b.opts.length<2){errors.push('Q'+(idx+1)+' "'+b.txt.slice(0,30)+'": only '+b.opts.length+' option(s) found');return;}
+    if(!b.ans){errors.push('Q'+(idx+1)+' "'+b.txt.slice(0,30)+'": missing Answer line');return;}
+    if(b.ans<1||b.ans>b.opts.length){errors.push('Q'+(idx+1)+': answer out of range');return;}
+    questions.push({text:b.txt,options:b.opts,correct:b.ans-1});
   });
+
   return{questions,errors};
 }
 
@@ -873,8 +938,18 @@ async function deleteQuiz(id){
 // ══════════════════════════════════════════
 function startQuiz(id){
   activeQuiz=quizzes.find(q=>q.id===id);if(!activeQuiz)return;
+  // Show name picker first
+  document.getElementById('pre-quiz-modal').classList.add('open');
+  document.getElementById('pre-quiz-name').textContent=activeQuiz.title;
+  document.getElementById('pre-player-select').value='';
+}
+function beginQuiz(){
+  const name=document.getElementById('pre-player-select').value;
+  if(!name){toast('Please select your name first!','error');return;}
+  pendingResult={playerName:name};
+  document.getElementById('pre-quiz-modal').classList.remove('open');
   userAnswers={};timeLeft=activeQuiz.time_limit*60;
-  document.getElementById('modal-quiz-title').textContent=activeQuiz.title;
+  document.getElementById('modal-quiz-title').textContent=activeQuiz.title+' — '+name;
   document.getElementById('quiz-modal').classList.add('open');
   renderQuizQs();startTimer();
 }
@@ -904,7 +979,8 @@ function submitQuiz(timeout=false){
   clearInterval(timerInterval);
   let correct=0;activeQuiz.questions.forEach((q,i)=>{if(userAnswers[i]===q.correct)correct++;});
   const total=activeQuiz.questions.length,pct=Math.round(correct/total*100),passed=pct>=activeQuiz.pass_score;
-  pendingResult={quizId:activeQuiz.id,quizTitle:activeQuiz.title,score:pct,correct,total,passed};
+  const pName=pendingResult?.playerName||'';
+  pendingResult={quizId:activeQuiz.id,quizTitle:activeQuiz.title,score:pct,correct,total,passed,playerName:pName};
   if(passed)confetti();
   document.getElementById('quiz-modal-body').innerHTML=`
     ${timeout?'<div style="background:rgba(139,26,26,.15);border:1px solid rgba(192,57,43,.3);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:.8rem;color:var(--blood-g)">⏱ Time\'s up! Auto-submitted.</div>':''}
@@ -923,7 +999,20 @@ function submitQuiz(timeout=false){
     <div class="review-list">${activeQuiz.questions.map((q,i)=>{const ua=userAnswers[i],isC=ua===q.correct;return`<div class="review-item ${isC?'correct-ans':'wrong-ans'}"><div class="review-q">${i+1}. ${q.text}</div><div class="review-options">${q.options.map((o,oi)=>{let cl='neutral';if(oi===q.correct)cl='correct-opt';else if(oi===ua&&!isC)cl='wrong-opt';return`<div class="review-opt ${cl}">${['A','B','C','D'][oi]}. ${o}${oi===q.correct?' ✓':''}${oi===ua&&!isC?' ✗':''}</div>`;}).join('')}</div></div>`;}).join('')}</div>
     <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:14px" onclick="closeQuizModal()">Close</button>`;
 }
-function openNameModal(){document.getElementById('name-modal').classList.add('open');}
+function openNameModal(){
+  // If name already selected, auto submit
+  if(pendingResult && pendingResult.playerName){
+    autoSubmitScore();return;
+  }
+  document.getElementById('name-modal').classList.add('open');
+}
+async function autoSubmitScore(){
+  const name=pendingResult.playerName;
+  try{
+    await dbPost('scores',{quiz_id:pendingResult.quizId,quiz_title:pendingResult.quizTitle,player_name:name,score:pendingResult.score,correct:pendingResult.correct,total:pendingResult.total,passed:pendingResult.passed});
+    toast(name+' — score saved! 🏆');pendingResult=null;
+  }catch(e){toast('Failed to save score','error');}
+}
 async function submitScore(){
   const name=document.getElementById('player-select').value;
   if(!name){toast('Select your name','error');return;}
