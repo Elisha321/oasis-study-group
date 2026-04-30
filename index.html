@@ -1057,7 +1057,7 @@ function renderFees(){
         <button class="btn btn-success btn-sm" onclick="payFee('${m.name}',${i})">✓Paid</button>
       </div>
       <div class="fee-log"><div class="fee-log-title">History</div>
-        <div class="fee-log-list">${logs.length?logs.map(l=>`<div class="fee-log-item"><span style="font-size:.6rem;color:var(--muted)">${l.type==='pay'?'paid':'fined'}</span><span class="fee-log-amt ${l.type==='pay'?'pay':'add'}">${l.type==='pay'?'-':'+'}${CUR}${Number(l.amount).toFixed(2)}</span><span class="fee-log-date">${new Date(l.created_at).toLocaleDateString()}</span></div>`).join(''):'<div style="font-size:.72rem;color:var(--muted);padding:3px 7px">No entries</div>'}
+        <div class="fee-log-list">${logs.length?logs.map(l=>`<div class="fee-log-item"><span style="font-size:.6rem;color:var(--muted)">${l.type==='pay'?'paid':'fined'}</span><span class="fee-log-amt ${l.type==='pay'?'pay':'add'}">${l.type==='pay'?'-':'+'}${CUR}${Number(l.amount).toFixed(2)}</span><span class="fee-log-date">${new Date(l.created_at).toLocaleDateString()}</span><button onclick="adminDelete(${l.id},'${l.member_name}',${l.amount},'${l.type}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.65rem;padding:1px 5px;border-radius:4px;transition:all .2s" onmouseover="this.style.color='var(--blood-g)'" onmouseout="this.style.color='var(--muted)'">✕</button></div>`).join(''):'<div style="font-size:.72rem;color:var(--muted);padding:3px 7px">No entries</div>'}
         </div>
       </div>
     </div>`;
@@ -1166,6 +1166,28 @@ function tickPom(){pomTime--;updatePomDisp();if(pomTime<=0){clearInterval(pomInt
 function resetPom(){clearInterval(pomInterval);pomRunning=false;pomIsBreak=false;pomTime=25*60;pomTotal=25*60;document.getElementById('pom-btn').textContent='▶ Start';updatePomDisp();}
 function updatePomDisp(){const m=Math.floor(pomTime/60),s=pomTime%60;document.getElementById('pom-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('pom-label').textContent=pomIsBreak?'Break Time 🌿':'Study Session';document.getElementById('pom-mode').textContent=pomIsBreak?'Break':'Focus Time';document.getElementById('pom-mode').className='pom-mode '+(pomIsBreak?'break':'study');document.getElementById('pom-ring').className='pom-ring'+(pomIsBreak?' break':'');document.getElementById('pom-sess').textContent=pomSessions;document.getElementById('pom-circle').style.strokeDashoffset=453*(1-pomTime/pomTotal);}
 function updatePomDots(){document.getElementById('pom-dots').innerHTML=Array.from({length:4},(_,i)=>`<div class="pom-dot ${i<pomSessions?'done':''}"></div>`).join('');}
+
+// ══ ADMIN DELETE (Elisha only) ══
+const ADMIN_PIN='1234'; // Change this to your secret PIN
+async function adminDelete(logId, memberName, amount, type){
+  const pin=prompt('Enter admin PIN to delete this entry:');
+  if(pin===null)return;
+  if(pin!==ADMIN_PIN){toast('Wrong PIN — only Elisha can delete entries','error');return;}
+  if(!confirm('Delete this '+type+' entry of '+CUR+Number(amount).toFixed(2)+' for '+memberName+'?'))return;
+  try{
+    // Reverse the balance effect
+    const ex=feesData[memberName];
+    if(ex){
+      let newBal=Number(ex.balance);
+      if(type==='fine') newBal=Math.max(0,newBal-amount);
+      else newBal=newBal+amount;
+      await dbPatch('fees',{balance:newBal,updated_at:new Date().toISOString()},'?member_name=eq.'+memberName);
+    }
+    await dbDelete('fee_logs','?id=eq.'+logId);
+    toast('Entry deleted ✓');
+    await loadFees();
+  }catch(e){toast('Failed to delete','error');}
+}
 
 // ══ INIT ══
 populateSelects();renderMembers();updatePomDisp();updatePomDots();
