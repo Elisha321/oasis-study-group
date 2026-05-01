@@ -358,6 +358,26 @@ main{flex:1;padding:24px 16px;max-width:1280px;margin:0 auto;width:100%}
 .confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:999}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
 @media(max-width:500px){.members-grid{grid-template-columns:repeat(2,1fr)}.quick-actions{grid-template-columns:1fr 1fr}.fee-sum,.ana-grid{grid-template-columns:1fr 1fr}.form-row{grid-template-columns:1fr}}
+
+/* FLOATING TIMER */
+.floating-timer{
+  position:fixed;top:70px;right:16px;z-index:150;
+  background:var(--surface);border:2px solid var(--purple);
+  border-radius:14px;padding:10px 16px;text-align:center;
+  box-shadow:0 4px 24px rgba(124,58,237,.35);
+  display:none;flex-direction:column;align-items:center;
+  backdrop-filter:blur(10px);
+  transition:border-color .3s,box-shadow .3s;
+  min-width:90px;
+}
+.floating-timer.warning{border-color:var(--warn);box-shadow:0 4px 24px rgba(245,158,11,.4)}
+.floating-timer.danger{border-color:var(--blood-g);box-shadow:0 4px 24px rgba(231,76,60,.5);animation:ftpulse .8s infinite alternate}
+@keyframes ftpulse{from{transform:scale(1)}to{transform:scale(1.06)}}
+.floating-timer-label{font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.floating-timer-time{font-family:'DM Mono',monospace;font-size:1.6rem;font-weight:700;letter-spacing:.08em;line-height:1;color:var(--purple-l)}
+.floating-timer.warning .floating-timer-time{color:var(--warn)}
+.floating-timer.danger .floating-timer-time{color:var(--blood-g)}
+.floating-timer-name{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -585,6 +605,14 @@ C</span></div>
 </div>
 
 </main>
+
+
+<!-- FLOATING TIMER -->
+<div class="floating-timer" id="floating-timer">
+  <div class="floating-timer-label">⏱ Time Left</div>
+  <div class="floating-timer-time" id="ft-time">25:00</div>
+  <div class="floating-timer-name" id="ft-name"></div>
+</div>
 
 <!-- PRE QUIZ MODAL -->
 <div class="modal-overlay" id="pre-modal">
@@ -825,13 +853,16 @@ async function saveQuiz(){
   if(answers.length!==rawQs.length){toast(rawQs.length+' questions but '+answers.length+' answers — must match!','error');return;}
   const bad=rawQs.filter(q=>q.opts.length<2);if(bad.length){toast(bad.length+' questions have less than 2 options','error');previewBulk();return;}
   const questions=rawQs.map((q,i)=>({text:q.text,options:q.opts,correct:answers[i]}));
+  const dataSize=JSON.stringify(questions).length;
+  console.log('Questions data size:',dataSize,'bytes');
+  if(dataSize>900000){toast('Too much data — try splitting into 2 quizzes of 60 questions each','error');return;}
   try{
     await dbP('quizzes',{title,description:document.getElementById('quiz-desc').value.trim(),time_limit:parseInt(document.getElementById('quiz-time').value)||10,pass_score:parseInt(document.getElementById('quiz-pass').value)||70,questions});
     toast('Quiz saved with '+questions.length+' questions! 🎉');
     ['quiz-title','quiz-desc','bulk-input','answers-input'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('bulk-preview').style.display='none';document.getElementById('q-count-lbl').textContent='';
     go('quizzes');
-  }catch(e){toast('Failed to save','error');}
+  }catch(e){console.error('Save error:',e);toast('Save failed: '+( e.message||JSON.stringify(e)),'error');}
 }
 
 
