@@ -682,6 +682,11 @@ const dbGet=(t,q='')=>db(t,'GET',null,q);
 const dbPost=(t,b)=>db(t,'POST',b);
 const dbPatch=(t,b,q)=>db(t,'PATCH',b,q);
 const dbDelete=(t,q)=>db(t,'DELETE',null,q);
+// Short aliases
+const dbG=dbGet;
+const dbP=dbPost;
+const dbPa=dbPatch;
+const dbD=dbDelete;
 function setSyncing(on,err=false){
   const d=document.getElementById('sync-dot'),t=document.getElementById('sync-text');
   if(!d)return;
