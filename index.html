@@ -382,6 +382,26 @@ main{flex:1;padding:28px 20px;max-width:1280px;margin:0 auto;width:100%}
 @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:999}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* ADMIN PANEL */
+.admin-panel{position:fixed;bottom:20px;left:20px;z-index:300}
+.admin-fab{width:44px;height:44px;background:linear-gradient(135deg,var(--blood),var(--purple));border:none;border-radius:50%;color:#fff;font-size:1.1rem;cursor:pointer;box-shadow:0 4px 16px rgba(139,26,26,.4);transition:all .2s;display:flex;align-items:center;justify-content:center}
+.admin-fab:hover{transform:scale(1.1)}
+.admin-modal{position:fixed;inset:0;background:rgba(14,10,20,.95);backdrop-filter:blur(12px);z-index:400;display:none;align-items:center;justify-content:center;padding:16px}
+.admin-modal.open{display:flex}
+.admin-box{background:var(--surface);border:1px solid var(--blood);border-radius:18px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.admin-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.admin-title{font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--blood-g);display:flex;align-items:center;gap:8px}
+.admin-body{padding:0 20px 20px}
+.admin-section{margin-bottom:20px}
+.admin-section-title{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.admin-member-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.admin-member-name{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;color:var(--text)}
+.admin-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.admin-input{background:var(--surface3);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;transition:border .2s;width:110px}
+.admin-input:focus{border-color:var(--blood-g)}
+.admin-bal{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;flex:1}
+.admin-bal.owed{color:var(--blood-g)}.admin-bal.clear{color:var(--success)}
 </style>
 </head>
 <body>
@@ -552,7 +572,10 @@ main{flex:1;padding:28px 20px;max-width:1280px;margin:0 auto;width:100%}
 <div class="page" id="page-fees">
   <div class="sec-header">
     <div class="sec-title">💸 Lateness Fees</div>
-    <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted)">Currency: ₦ Naira</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted)">Currency: ₦ Naira</div>
+      <button class="btn btn-secondary btn-sm" onclick="openAdminPanel()" style="border-color:var(--blood);color:var(--blood-g)">🔐 Admin</button>
+    </div>
   </div>
   <p style="font-size:.8rem;color:var(--muted);margin-bottom:18px;line-height:1.6">Track lateness fines in Naira. Add fines and record payments — synced live for all members.</p>
   <div class="fee-summary" id="fee-summary"></div>
@@ -644,6 +667,17 @@ main{flex:1;padding:28px 20px;max-width:1280px;margin:0 auto;width:100%}
       <div class="form-group"><label class="form-label">Colour</label><select class="form-select" id="notice-color"><option value="purple">🟣 Purple</option><option value="yellow">🟡 Yellow</option><option value="red">🔴 Red</option><option value="green">🟢 Green</option></select></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="postNotice()">Post Notice</button>
     </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="admin-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Admin Panel — Fees</div>
+      <button class="modal-close" onclick="closeAdminModal()">✕</button>
+    </div>
+    <div class="modal-body" id="admin-modal-body"></div>
   </div>
 </div>
 
@@ -1167,8 +1201,115 @@ function resetPom(){clearInterval(pomInterval);pomRunning=false;pomIsBreak=false
 function updatePomDisp(){const m=Math.floor(pomTime/60),s=pomTime%60;document.getElementById('pom-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('pom-label').textContent=pomIsBreak?'Break Time 🌿':'Study Session';document.getElementById('pom-mode').textContent=pomIsBreak?'Break':'Focus Time';document.getElementById('pom-mode').className='pom-mode '+(pomIsBreak?'break':'study');document.getElementById('pom-ring').className='pom-ring'+(pomIsBreak?' break':'');document.getElementById('pom-sess').textContent=pomSessions;document.getElementById('pom-circle').style.strokeDashoffset=453*(1-pomTime/pomTotal);}
 function updatePomDots(){document.getElementById('pom-dots').innerHTML=Array.from({length:4},(_,i)=>`<div class="pom-dot ${i<pomSessions?'done':''}"></div>`).join('');}
 
+// ══ ADMIN PANEL ══
+let adminUnlocked=false;
+
+function openAdminPanel(){
+  if(!adminUnlocked){
+    const pin=prompt('Enter Admin PIN:');
+    if(pin===null)return;
+    if(pin!==ADMIN_PIN){toast('Wrong PIN','error');return;}
+    adminUnlocked=true;
+    toast('Admin access granted ✓');
+  }
+  renderAdminPanel();
+  document.getElementById('admin-modal').classList.add('open');
+}
+
+function closeAdminModal(){
+  document.getElementById('admin-modal').classList.remove('open');
+}
+
+function renderAdminPanel(){
+  const body=document.getElementById('admin-modal-body');
+  body.innerHTML=`
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:18px;line-height:1.6">Edit any member's balance directly or delete specific entries. Changes sync live for everyone.</p>
+    <div style="display:flex;flex-direction:column;gap:12px" id="admin-members-list">
+      ${MEMBERS.map((m,i)=>{
+        const d=feesData[m.name]||{balance:0,logs:[]};
+        const bal=Number(d.balance)||0;
+        const[c1,c2]=COLORS[i];
+        return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,${c1},${c2});display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:900;flex-shrink:0">${m.name[0]}</div>
+            <div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase">${m.name}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:${bal>0?'var(--blood-g)':'var(--success)'}">Current: ₦${bal.toFixed(2)}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;margin-bottom:10px">
+            <input id="admin-bal-${i}" type="number" step="0.01" placeholder="New balance (₦)" value="${bal.toFixed(2)}" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none"/>
+            <button class="btn btn-primary btn-sm" onclick="adminSetBalance('${m.name}',${i})">Set Balance</button>
+            <button class="btn btn-danger btn-sm" onclick="adminClearAll('${m.name}')">Clear All</button>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">History — tap ✕ to delete entry</div>
+          <div style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto">
+            ${(d.logs||[]).length?(d.logs||[]).map(l=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.74rem">
+                <span style="color:var(--muted)">${l.type==='pay'?'paid':'fined'}</span>
+                <span style="font-family:'DM Mono',monospace;font-weight:700;color:${l.type==='pay'?'var(--success)':'var(--blood-g)'}">${l.type==='pay'?'-':'+'}₦${Number(l.amount).toFixed(2)}</span>
+                <span style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted)">${new Date(l.created_at).toLocaleDateString()}</span>
+                <button onclick="adminDeleteLog(${l.id},'${m.name}',${l.amount},'${l.type}')" style="background:none;border:none;color:var(--blood-g);cursor:pointer;font-size:.78rem;padding:1px 5px;border-radius:4px">✕</button>
+              </div>`).join(''):'<div style="font-size:.72rem;color:var(--muted);padding:3px">No entries</div>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:16px" onclick="adminLock()">🔒 Lock Admin & Close</button>
+  `;
+}
+
+async function adminSetBalance(name,i){
+  const val=parseFloat(document.getElementById('admin-bal-'+i).value);
+  if(isNaN(val)){toast('Enter a valid amount','error');return;}
+  try{
+    const ex=feesData[name];
+    if(ex) await dbPatch('fees',{balance:val,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:val});
+    toast(name+"'s balance set to ₦"+val.toFixed(2));
+    await loadFees();
+    renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminClearAll(name){
+  if(!confirm('Clear ALL history and set balance to ₦0.00 for '+name+'?'))return;
+  try{
+    const ex=feesData[name];
+    if(ex) await dbPatch('fees',{balance:0,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:0});
+    // Delete all logs for this member
+    await dbDelete('fee_logs','?member_name=eq.'+name);
+    toast(name+"'s fees fully cleared ✓");
+    await loadFees();
+    renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminDeleteLog(logId,memberName,amount,type){
+  try{
+    const ex=feesData[memberName];
+    if(ex){
+      let newBal=Number(ex.balance);
+      if(type==='fine') newBal=Math.max(0,newBal-amount);
+      else newBal=newBal+amount;
+      await dbPatch('fees',{balance:newBal,updated_at:new Date().toISOString()},'?member_name=eq.'+memberName);
+    }
+    await dbDelete('fee_logs','?id=eq.'+logId);
+    toast('Entry deleted ✓');
+    await loadFees();
+    renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+function adminLock(){
+  adminUnlocked=false;
+  closeAdminModal();
+  toast('Admin locked 🔒');
+}
+
 // ══ ADMIN DELETE (Elisha only) ══
-const ADMIN_PIN='1234'; // Change this to your secret PIN
+const ADMIN_PIN='1206'; // Change this to your secret PIN
 async function adminDelete(logId, memberName, amount, type){
   const pin=prompt('Enter admin PIN to delete this entry:');
   if(pin===null)return;
@@ -1187,6 +1328,1567 @@ async function adminDelete(logId, memberName, amount, type){
     toast('Entry deleted ✓');
     await loadFees();
   }catch(e){toast('Failed to delete','error');}
+}
+
+
+// ══ ADMIN PANEL ══
+let adminUnlocked=false;
+function openAdmin(){
+  if(!adminUnlocked){
+    const pin=prompt('Enter Admin PIN:');
+    if(pin===null)return;
+    if(pin!==ADMIN_PIN){toast('Wrong PIN','error');return;}
+    adminUnlocked=true;
+    toast('Admin access granted 🔐');
+  }
+  renderAdminPanel();
+  document.getElementById('admin-modal').classList.add('open');
+}
+function closeAdmin(){document.getElementById('admin-modal').classList.remove('open');}
+
+function renderAdminPanel(){
+  // Fee management
+  const feeList=document.getElementById('admin-fee-list');
+  feeList.innerHTML=MEMBERS.map((m,i)=>{
+    const d=feesData[m.name]||{balance:0,logs:[]};
+    const bal=Number(d.balance)||0;
+    const[c1,c2]=COLORS[i];
+    return`<div class="admin-member-row">
+      <div class="admin-member-name" style="display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,${c1},${c2});display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.85rem">${m.name[0]}</div>
+        ${m.name}
+        <div class="admin-bal ${bal>0?'owed':'clear'}">₦${Math.abs(bal).toFixed(2)}</div>
+      </div>
+      <div class="admin-controls">
+        <input class="admin-input" id="admin-fi-${i}" type="number" min="0" step="0.01" placeholder="New balance"/>
+        <button class="btn btn-danger btn-sm" onclick="adminSetBalance('${m.name}',${i})">Set Balance</button>
+        <button class="btn btn-success btn-sm" onclick="adminClearBalance('${m.name}')">Clear All</button>
+        <button class="btn btn-secondary btn-sm" onclick="adminDeleteAllLogs('${m.name}')">Clear History</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Quiz list for deletion
+  const quizList=document.getElementById('admin-quiz-list');
+  if(!quizzes.length){quizList.innerHTML='<div style="font-size:.78rem;color:var(--muted)">No quizzes</div>';}
+  else{quizList.innerHTML=quizzes.map(q=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.88rem;letter-spacing:.03em">${q.title} <span style="color:var(--muted);font-size:.72rem">(${q.questions.length}Qs)</span></div>
+    <button class="btn btn-danger btn-sm" onclick="adminDeleteQuiz(${q.id},'${q.title.replace(/'/g,"\'")}')">Delete</button>
+  </div>`).join('');}
+
+  // Score clearing
+  const scoreList=document.getElementById('admin-score-list');
+  if(!quizzes.length){scoreList.innerHTML='<div style="font-size:.78rem;color:var(--muted)">No quizzes</div>';}
+  else{scoreList.innerHTML=quizzes.map(q=>{
+    const count=scores.filter(s=>s.quiz_id===q.id).length;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.88rem">${q.title} <span style="color:var(--muted);font-size:.72rem">(${count} scores)</span></div>
+      <button class="btn btn-danger btn-sm" onclick="adminClearScores(${q.id},'${q.title.replace(/'/g,"\'")}')">Clear</button>
+    </div>`;
+  }).join('');}
+}
+
+async function adminSetBalance(name,i){
+  const val=parseFloat(document.getElementById('admin-fi-'+i).value);
+  if(isNaN(val)){toast('Enter a valid amount','error');return;}
+  if(!confirm('Set '+name+''s balance to ₦'+val.toFixed(2)+'?'))return;
+  try{
+    const ex=feesData[name];
+    if(ex)await dbPatch('fees',{balance:val,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:val});
+    await dbPost('fee_logs',{member_name:name,type:'fine',amount:val,created_at:new Date().toISOString()});
+    toast(name+''s balance set to ₦'+val.toFixed(2));
+    document.getElementById('admin-fi-'+i).value='';
+    await loadFees();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminClearBalance(name){
+  if(!confirm('Clear ALL balance for '+name+'? This sets it to ₦0.'))return;
+  try{
+    const ex=feesData[name];
+    if(ex)await dbPatch('fees',{balance:0,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:0});
+    toast(name+''s balance cleared ✓');
+    await loadFees();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminDeleteAllLogs(name){
+  if(!confirm('Delete ALL fee history for '+name+'? Cannot be undone.'))return;
+  try{
+    await dbDelete('fee_logs','?member_name=eq.'+name);
+    toast(name+''s fee history cleared ✓');
+    await loadFees();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminDeleteQuiz(id,title){
+  if(!confirm('Delete quiz "'+title+'"? This also deletes all scores for it.'))return;
+  try{
+    await dbDelete('quizzes','?id=eq.'+id);
+    await dbDelete('scores','?quiz_id=eq.'+id);
+    toast('Quiz deleted ✓');
+    await loadQuizzes();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminClearScores(quizId,title){
+  if(!confirm('Clear ALL scores for "'+title+'"?'))return;
+  try{
+    await dbDelete('scores','?quiz_id=eq.'+quizId);
+    toast('Scores cleared ✓');
+    await loadLeaderboard();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+// ══ INIT ══
+populateSelects();renderMembers();updatePomDisp();updatePomDots();
+loadQuizzes();
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Oasis Study Group</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0e0a14;--surface:#1a1126;--surface2:#211535;--surface3:#2c1d47;
+  --purple:#7c3aed;--purple-l:#a855f7;--grey:#6b7280;--grey-l:#9ca3af;
+  --blood:#8b1a1a;--blood-l:#c0392b;--blood-g:#e74c3c;
+  --border:#2e1f4a;--border2:#3d2a60;--text:#f0eaf8;--muted:#7c6d99;
+  --success:#10b981;--accent:#d946ef;--warn:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 20% 0%,rgba(124,58,237,.2) 0%,transparent 60%),
+  radial-gradient(ellipse 60% 50% at 80% 100%,rgba(139,26,26,.25) 0%,transparent 55%),
+  radial-gradient(ellipse 40% 40% at 50% 50%,rgba(217,70,239,.04) 0%,transparent 70%)}
+#app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── HEADER ── */
+header{position:sticky;top:0;z-index:100;padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(14,10,20,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.logo-wrap{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo-hex{width:36px;height:36px;background:linear-gradient(135deg,var(--purple),var(--blood-l));border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;color:#fff;box-shadow:0 0 16px rgba(124,58,237,.4);flex-shrink:0}
+.logo-text{display:flex;flex-direction:column;line-height:1}
+.logo-name{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.logo-sub{font-family:'DM Mono',monospace;font-size:.48rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px}
+.sync-badge{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);flex-shrink:0}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse-dot 2s infinite}
+.sync-dot.syncing{background:var(--warn)}
+.sync-dot.error{background:var(--blood-g);animation:none}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* HAMBURGER */
+.hamburger{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:38px;height:38px;border-radius:9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;transition:all .2s}
+.hamburger:hover{border-color:var(--purple);background:rgba(124,58,237,.1)}
+.hamburger span{display:block;width:18px;height:2px;background:var(--text);border-radius:2px;transition:all .3s}
+.hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+
+/* SLIDE NAV */
+.nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:98;display:none;backdrop-filter:blur(4px)}
+.nav-overlay.open{display:block}
+.slide-nav{position:fixed;top:0;right:-280px;width:270px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:99;transition:right .3s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:20px 16px}
+.slide-nav.open{right:0}
+.nav-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.nav-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;padding:4px}
+.nav-section-title{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;margin-top:16px;padding-left:4px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;cursor:pointer;transition:all .2s;margin-bottom:3px;border:1px solid transparent}
+.nav-item:hover{background:rgba(124,58,237,.08);border-color:rgba(168,85,247,.2)}
+.nav-item.active{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(139,26,26,.15));border-color:rgba(168,85,247,.3)}
+.nav-item-icon{font-size:1.1rem;width:24px;text-align:center;flex-shrink:0}
+.nav-item-label{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text)}
+.nav-item.active .nav-item-label{color:var(--purple-l)}
+
+/* MAIN */
+main{flex:1;padding:28px 20px;max-width:1280px;margin:0 auto;width:100%}
+.page{display:none;animation:rise .38s cubic-bezier(.22,1,.36,1)}
+.page.active{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── HOME ── */
+.hero{padding:20px 0 0}
+.hero-announce{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(139,26,26,.15));border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:12px 18px;display:flex;align-items:center;gap:10px;margin-bottom:28px;font-size:.85rem}
+.hero-announce-icon{font-size:1.2rem}
+.hero-announce-text{color:var(--grey-l);line-height:1.5}
+.hero-announce-text strong{color:var(--purple-l)}
+.hero-main{margin-bottom:36px}
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blood-g);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.hero-eyebrow::before{content:'';width:24px;height:2px;background:var(--blood-g);display:inline-block}
+.hero-h1{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;line-height:1.06;letter-spacing:-.02em;margin-bottom:14px}
+.hero-h1 .line1{display:block;color:var(--text)}
+.hero-h1 .line2{display:block;background:linear-gradient(110deg,var(--purple-l),var(--accent),var(--blood-g));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-desc{font-size:.9rem;color:var(--grey-l);line-height:1.75;margin-bottom:22px;max-width:500px}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap}
+.cta-primary{background:linear-gradient(135deg,var(--purple),var(--blood));color:#fff;border:none;padding:12px 24px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .25s;box-shadow:0 4px 22px rgba(124,58,237,.35)}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,58,237,.5)}
+.cta-secondary{background:transparent;color:var(--purple-l);border:1.5px solid rgba(168,85,247,.4);padding:11px 22px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .25s}
+.cta-secondary:hover{border-color:var(--purple-l);background:rgba(124,58,237,.1)}
+
+/* LIVE STATS BAR */
+.live-stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:28px}
+.live-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center;transition:all .22s}
+.live-stat:hover{border-color:var(--border2);transform:translateY(-2px)}
+.live-stat-num{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;line-height:1}
+.live-stat-lbl{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+
+/* MEMBERS */
+.members-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px}
+.member-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;transition:all .25s;cursor:default}
+.member-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.member-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;margin-bottom:9px;position:relative;border:2px solid transparent;transition:all .25s}
+.member-card:hover .member-avatar{border-color:rgba(168,85,247,.5);box-shadow:0 0 14px rgba(124,58,237,.3)}
+.member-num{position:absolute;bottom:-1px;right:-1px;width:17px;height:17px;border-radius:50%;background:var(--blood);font-family:'DM Mono',monospace;font-size:.48rem;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);font-weight:700}
+.member-name{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;line-height:1}
+.member-role{font-size:.62rem;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace}
+.member-score{font-size:.7rem;color:var(--success);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* QUICK ACTIONS */
+.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px}
+.action-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;position:relative;overflow:hidden;transition:all .25s}
+.action-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.action-card:nth-child(1)::before{background:linear-gradient(90deg,var(--purple),var(--accent))}
+.action-card:nth-child(2)::before{background:linear-gradient(90deg,var(--blood),var(--blood-g))}
+.action-card:nth-child(3)::before{background:linear-gradient(90deg,var(--success),#34d399)}
+.action-card:nth-child(4)::before{background:linear-gradient(90deg,var(--grey),var(--grey-l))}
+.action-card:hover{transform:translateY(-4px);border-color:var(--border2);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.action-icon{font-size:1.8rem;margin-bottom:9px;display:block}
+.action-title{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+.action-desc{font-size:.76rem;color:var(--muted);line-height:1.55}
+.action-arrow{position:absolute;bottom:14px;right:14px;color:var(--muted);transition:all .2s;font-size:.9rem}
+.action-card:hover .action-arrow{color:var(--purple-l);transform:translateX(3px)}
+
+/* TOP SCORER CARD */
+.top-scorer-wrap{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(139,26,26,.1));border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:18px;margin-bottom:28px;display:flex;align-items:center;gap:16px}
+.top-scorer-trophy{font-size:2.5rem}
+.top-scorer-info{flex:1}
+.top-scorer-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.top-scorer-name{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--warn)}
+.top-scorer-score{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--muted);margin-top:2px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--purple),var(--blood));color:#fff;box-shadow:0 2px 14px rgba(124,58,237,.3)}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--border2);color:var(--purple-l)}
+.btn-danger{background:rgba(139,26,26,.2);color:var(--blood-g);border:1px solid rgba(192,57,43,.3)}
+.btn-danger:hover{background:rgba(139,26,26,.35)}
+.btn-success{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
+.btn-sm{padding:5px 12px;font-size:.74rem}
+.btn-lg{padding:12px 26px;font-size:1rem}
+
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px}
+.sec-title{font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.divider{height:1px;background:var(--border);margin:18px 0}
+
+/* FORM */
+.form-group{margin-bottom:15px}
+.form-label{display:block;font-family:'DM Mono',monospace;font-size:.63rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.form-input,.form-textarea,.form-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'Barlow',sans-serif;font-size:.87rem;outline:none;transition:border .2s}
+.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:var(--purple)}
+.form-textarea{resize:vertical;line-height:1.6}
+.form-select option{background:var(--surface2)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+
+/* BADGES */
+.badge{border-radius:6px;padding:3px 9px;font-family:'DM Mono',monospace;font-size:.65rem}
+.badge-t{background:rgba(124,58,237,.12);border:1px solid rgba(168,85,247,.25);color:var(--purple-l)}
+.badge-q{background:rgba(139,26,26,.12);border:1px solid rgba(192,57,43,.25);color:var(--blood-g)}
+.badge-p{background:rgba(107,114,128,.1);border:1px solid rgba(156,163,175,.2);color:var(--grey-l)}
+.badge-s{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:var(--success)}
+
+/* QUIZ CARDS */
+.quiz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:13px}
+.quiz-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px;transition:all .22s;position:relative;overflow:hidden}
+.quiz-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--blood-g))}
+.quiz-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.quiz-card h3{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+.quiz-card p{font-size:.78rem;color:var(--muted);margin-bottom:11px;line-height:1.5}
+.quiz-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}
+.card-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* QUIZ TAKING */
+.quiz-header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px 16px}
+.quiz-title-bar{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.timer-display{font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:500;color:var(--purple-l);letter-spacing:.1em}
+.timer-display.warning{color:var(--warn)}
+.timer-display.danger{color:var(--blood-g);animation:tpulse .5s infinite alternate}
+@keyframes tpulse{to{opacity:.4}}
+.progress-bar-wrap{height:3px;background:var(--surface3);border-radius:4px;margin-bottom:20px;overflow:hidden}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--blood-g));border-radius:4px;transition:width .3s}
+.question-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px}
+.question-num{font-family:'DM Mono',monospace;font-size:.64rem;color:var(--purple-l);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.question-text{font-size:.96rem;font-weight:600;line-height:1.55;margin-bottom:14px}
+.options-choices{display:flex;flex-direction:column;gap:7px}
+.choice-btn{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;text-align:left;cursor:pointer;font-family:'Barlow',sans-serif;font-size:.84rem;color:var(--text);transition:all .2s;display:flex;align-items:center;gap:10px}
+.choice-btn:hover:not(:disabled){border-color:var(--purple);background:rgba(124,58,237,.08)}
+.choice-btn.selected{border-color:var(--purple);background:rgba(124,58,237,.12)}
+.choice-btn.correct{border-color:var(--success);background:rgba(16,185,129,.1);color:var(--success)}
+.choice-btn.wrong{border-color:var(--blood-g);background:rgba(139,26,26,.12);color:var(--blood-g)}
+.choice-btn:disabled{cursor:default}
+.choice-letter{font-family:'DM Mono',monospace;font-size:.7rem;width:24px;height:24px;border-radius:6px;background:var(--surface3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+
+/* RESULTS */
+.results-box{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:28px;text-align:center;margin-bottom:20px}
+.score-ring{width:130px;height:130px;border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--purple) 0%,var(--blood-g) var(--pct,0%),var(--surface3) var(--pct,0%));position:relative}
+.score-ring::before{content:'';position:absolute;inset:11px;border-radius:50%;background:var(--surface)}
+.score-inner{position:relative;text-align:center}
+.score-num{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900}
+.score-label{font-family:'DM Mono',monospace;font-size:.64rem;color:var(--muted)}
+.results-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.r-stat{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px}
+.r-stat-num{font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;font-weight:800}
+.r-stat-lbl{font-size:.68rem;color:var(--muted)}
+.review-list{display:flex;flex-direction:column;gap:8px}
+.review-item{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:13px}
+.review-item.correct-ans{border-color:rgba(16,185,129,.3)}
+.review-item.wrong-ans{border-color:rgba(192,57,43,.3)}
+.review-q{font-size:.83rem;font-weight:600;margin-bottom:7px;line-height:1.4}
+.review-options{display:flex;flex-direction:column;gap:4px}
+.review-opt{font-size:.76rem;padding:4px 9px;border-radius:6px;display:flex;align-items:center;gap:6px}
+.review-opt.correct-opt{background:rgba(16,185,129,.1);color:var(--success)}
+.review-opt.wrong-opt{background:rgba(139,26,26,.1);color:var(--blood-g)}
+.review-opt.neutral{color:var(--muted)}
+
+/* LEADERBOARD */
+.leaderboard-list{display:flex;flex-direction:column;gap:8px}
+.lb-row{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px 16px;display:flex;align-items:center;gap:13px;transition:all .2s}
+.lb-row:hover{border-color:var(--border2);transform:translateX(2px)}
+.lb-rank{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;width:32px;text-align:center;flex-shrink:0}
+.lb-rank.gold{color:#f59e0b}.lb-rank.silver{color:#9ca3af}.lb-rank.bronze{color:#b45309}
+.lb-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.9rem;font-weight:900;flex-shrink:0}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.lb-detail{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);margin-top:1px}
+.lb-score{font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:800;color:var(--purple-l);flex-shrink:0}
+.lb-bar-wrap{height:3px;background:var(--surface3);border-radius:4px;margin-top:4px;overflow:hidden}
+.lb-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--purple),var(--blood-g));transition:width .8s}
+.lb-filter{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.lb-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 11px;border-radius:7px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:.76rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .2s}
+.lb-btn.active{color:var(--purple-l);border-color:rgba(168,85,247,.4);background:rgba(124,58,237,.1)}
+
+/* ANALYTICS */
+.analytics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-bottom:20px}
+.ana-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px;text-align:center}
+.ana-num{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:900;margin-bottom:3px}
+.ana-lbl{font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.06em}
+.hard-q-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+.hard-q-title{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.hard-q-item{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:8px}
+.hard-q-text{font-size:.83rem;font-weight:600;margin-bottom:8px;line-height:1.4}
+.hard-q-bar-wrap{height:6px;background:var(--surface3);border-radius:4px;margin-bottom:4px;overflow:hidden}
+.hard-q-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blood),var(--blood-g))}
+.hard-q-stat{font-family:'DM Mono',monospace;font-size:.64rem;color:var(--muted)}
+.hard-q-stat span{color:var(--blood-g)}
+.ana-quiz-row{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-bottom:9px}
+.ana-quiz-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.9rem;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+.ana-mini-stats{display:flex;gap:12px;flex-wrap:wrap}
+.ana-mini{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)}
+.ana-mini span{color:var(--text)}
+
+/* NOTICE */
+.notice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px}
+.notice-card{border-radius:12px;padding:16px;position:relative;overflow:hidden;transition:transform .2s}
+.notice-card:hover{transform:translateY(-2px)}
+.notice-card.yellow{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25)}
+.notice-card.purple{background:rgba(124,58,237,.08);border:1px solid rgba(168,85,247,.25)}
+.notice-card.red{background:rgba(139,26,26,.1);border:1px solid rgba(192,57,43,.25)}
+.notice-card.green{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.22)}
+.notice-author{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);margin-bottom:5px}
+.notice-text{font-size:.84rem;line-height:1.6}
+.notice-date{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:8px}
+.notice-del{position:absolute;top:9px;right:9px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem;opacity:0;transition:opacity .2s}
+.notice-card:hover .notice-del{opacity:1}
+
+/* POMODORO */
+.pomodoro-wrap{display:flex;flex-direction:column;gap:16px;max-width:400px}
+.pomodoro-clock{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;text-align:center}
+.pom-label{font-family:'DM Mono',monospace;font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.pom-ring{width:160px;height:160px;border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;position:relative}
+.pom-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.pom-ring circle{fill:none;stroke:var(--surface3);stroke-width:7}
+.pom-ring circle.prog{stroke:var(--purple);stroke-linecap:round;transition:stroke-dashoffset .9s linear;stroke-dasharray:453}
+.pom-ring.break circle.prog{stroke:var(--success)}
+.pom-time{font-family:'DM Mono',monospace;font-size:2.4rem;font-weight:500;letter-spacing:.08em;position:relative;z-index:1}
+.pom-mode{font-family:'Barlow Condensed',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.pom-mode.study{color:var(--purple-l)}.pom-mode.break{color:var(--success)}
+.pom-controls{display:flex;gap:8px;justify-content:center;margin-bottom:14px}
+.pom-sessions{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted)}
+.pom-dots{display:flex;gap:5px;justify-content:center;margin-top:4px}
+.pom-dot{width:8px;height:8px;border-radius:50%;background:var(--surface3)}
+.pom-dot.done{background:var(--purple)}
+
+/* FEES */
+.fee-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.fee-sum-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px;text-align:center}
+.fee-sum-num{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;margin-bottom:3px}
+.fee-sum-lbl{font-size:.67rem;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
+.fee-member-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:11px}
+.fee-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px;position:relative;overflow:hidden;transition:all .22s}
+.fee-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.fee-card.owed::before{background:linear-gradient(90deg,var(--blood),var(--blood-g))}
+.fee-card.clear::before{background:linear-gradient(90deg,var(--success),#34d399)}
+.fee-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.fee-card-top{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.fee-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1rem;font-weight:900;flex-shrink:0}
+.fee-name{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.fee-status{font-family:'DM Mono',monospace;font-size:.62rem;margin-top:2px}
+.fee-status.owed{color:var(--blood-g)}.fee-status.clear{color:var(--success)}
+.fee-amount-display{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:900;margin-bottom:2px;line-height:1}
+.fee-amount-display.owed{color:var(--blood-g)}.fee-amount-display.clear{color:var(--success)}
+.fee-amount-lbl{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:11px}
+.fee-controls{display:flex;gap:6px;align-items:center;margin-bottom:7px}
+.fee-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.84rem;outline:none;transition:border .2s}
+.fee-input:focus{border-color:var(--blood-g)}
+.fee-log{margin-top:11px;border-top:1px solid var(--border);padding-top:9px}
+.fee-log-title{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.fee-log-list{display:flex;flex-direction:column;gap:4px;max-height:100px;overflow-y:auto}
+.fee-log-item{display:flex;align-items:center;justify-content:space-between;font-size:.74rem;padding:3px 7px;border-radius:5px;background:var(--surface2)}
+.fee-log-amt{font-family:'DM Mono',monospace;font-weight:700}
+.fee-log-amt.add{color:var(--blood-g)}.fee-log-amt.pay{color:var(--success)}
+.fee-log-date{color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem}
+
+/* PDF SECTIONS */
+.pdf-section-wrap{display:flex;flex-direction:column;gap:16px}
+.pdf-section-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.pdf-section-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface2)}
+.pdf-section-name{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.pdf-section-count{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted)}
+.pdf-section-body{padding:14px 18px}
+.pdf-drop-mini{border:1.5px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px}
+.pdf-drop-mini:hover{border-color:var(--purple);background:rgba(124,58,237,.05)}
+.pdf-drop-mini-text{font-size:.78rem;color:var(--muted)}
+.pdf-list{display:flex;flex-direction:column;gap:7px}
+.pdf-item{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:11px;transition:all .2s}
+.pdf-item:hover{border-color:var(--border2)}
+.pdf-info{flex:1;min-width:0}
+.pdf-name{font-weight:600;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-size{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:1px}
+.add-section-form{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px;display:flex;gap:10px;align-items:flex-end}
+
+/* FLASHCARDS */
+.fc-stage{perspective:1000px;width:100%;max-width:560px;margin:0 auto;height:200px;cursor:pointer}
+.fc-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1)}
+.fc-inner.flipped{transform:rotateY(180deg)}
+.fc-face{position:absolute;inset:0;background:var(--surface);border:1px solid var(--border);border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;backface-visibility:hidden;text-align:center}
+.fc-back{transform:rotateY(180deg)}
+.fc-face::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:15px 15px 0 0;background:linear-gradient(90deg,var(--purple),var(--accent))}
+.fc-back::before{background:linear-gradient(90deg,var(--success),var(--accent))}
+.fc-tag{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.fc-text{font-size:.92rem;font-weight:600;line-height:1.5}
+.fc-hint{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);margin-top:6px}
+.fc-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px}
+.fc-counter{font-family:'DM Mono',monospace;font-size:.76rem;color:var(--muted)}
+.fc-progress{height:3px;background:var(--surface3);border-radius:4px;margin-bottom:14px;overflow:hidden}
+.fc-progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--blood-g));border-radius:4px;transition:width .3s}
+
+/* BULK */
+.bulk-importer{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+.bulk-importer-title{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px}
+.bulk-format-box{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;font-family:'DM Mono',monospace;font-size:.72rem;line-height:1.8;color:var(--grey-l);margin-bottom:13px;white-space:pre-wrap}
+.bulk-format-box .hl{color:var(--accent)}.bulk-format-box .hl2{color:var(--success)}
+.bulk-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px;color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;line-height:1.8;outline:none;resize:vertical;min-height:240px;transition:border .2s}
+.bulk-textarea:focus{border-color:var(--purple)}
+.bulk-preview{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-top:12px;display:none}
+.bulk-preview-title{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.preview-q{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 11px;margin-bottom:7px;font-size:.8rem}
+.preview-q-text{font-weight:600;margin-bottom:5px;color:var(--text)}
+.preview-q-opts{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.preview-opt{font-size:.73rem;color:var(--muted);padding:2px 5px;border-radius:3px}
+.preview-opt.correct{color:var(--success);background:rgba(16,185,129,.1);font-weight:700}
+.parse-error{background:rgba(139,26,26,.15);border:1px solid rgba(192,57,43,.3);border-radius:7px;padding:9px 13px;font-family:'DM Mono',monospace;font-size:.73rem;color:var(--blood-g);margin-top:9px}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty-state .icon{font-size:2.2rem;margin-bottom:11px;opacity:.35}
+.empty-state h3{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text);margin-bottom:5px}
+.empty-state p{font-size:.76rem}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(14,10,20,.92);backdrop-filter:blur(10px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:17px;width:100%;max-width:820px;max-height:92vh;overflow-y:auto;animation:rise .3s ease}
+.modal-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.modal-close{background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:0 20px 20px}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:18px;right:18px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 14px;font-size:.78rem;animation:toastIn .3s ease;display:flex;align-items:center;gap:7px;max-width:270px}
+.toast.success{border-color:rgba(16,185,129,.4);color:#6ee7b7}
+.toast.error{border-color:rgba(192,57,43,.4);color:var(--blood-g)}
+.toast.info{border-color:rgba(124,58,237,.4);color:var(--purple-l)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:999}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* ADMIN PANEL */
+.admin-panel{position:fixed;bottom:20px;left:20px;z-index:300}
+.admin-fab{width:44px;height:44px;background:linear-gradient(135deg,var(--blood),var(--purple));border:none;border-radius:50%;color:#fff;font-size:1.1rem;cursor:pointer;box-shadow:0 4px 16px rgba(139,26,26,.4);transition:all .2s;display:flex;align-items:center;justify-content:center}
+.admin-fab:hover{transform:scale(1.1)}
+.admin-modal{position:fixed;inset:0;background:rgba(14,10,20,.95);backdrop-filter:blur(12px);z-index:400;display:none;align-items:center;justify-content:center;padding:16px}
+.admin-modal.open{display:flex}
+.admin-box{background:var(--surface);border:1px solid var(--blood);border-radius:18px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.admin-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.admin-title{font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--blood-g);display:flex;align-items:center;gap:8px}
+.admin-body{padding:0 20px 20px}
+.admin-section{margin-bottom:20px}
+.admin-section-title{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.admin-member-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.admin-member-name{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;color:var(--text)}
+.admin-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.admin-input{background:var(--surface3);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;transition:border .2s;width:110px}
+.admin-input:focus{border-color:var(--blood-g)}
+.admin-bal{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:900;flex:1}
+.admin-bal.owed{color:var(--blood-g)}.admin-bal.clear{color:var(--success)}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="logo-wrap">
+    <div class="logo-hex">O</div>
+    <div class="logo-text">
+      <div class="logo-name">Oasis Study Group</div>
+      <div class="logo-sub">Elisha is peak · Live</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="sync-badge"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Live</span></div>
+    <button class="hamburger" id="hamburger-btn" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- SLIDE NAV -->
+<div class="nav-overlay" id="nav-overlay" onclick="closeNav()"></div>
+<div class="slide-nav" id="slide-nav">
+  <div class="nav-header">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1rem;letter-spacing:.06em;text-transform:uppercase">Menu</div>
+    <button class="nav-close" onclick="closeNav()">✕</button>
+  </div>
+  <div class="nav-section-title">Study</div>
+  <div class="nav-item" onclick="go('home')"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Home</span></div>
+  <div class="nav-item" onclick="go('quizzes')"><span class="nav-item-icon">📚</span><span class="nav-item-label">Quizzes</span></div>
+  <div class="nav-item" onclick="go('flashcards')"><span class="nav-item-icon">🃏</span><span class="nav-item-label">Flashcards</span></div>
+  <div class="nav-item" onclick="go('create')"><span class="nav-item-icon">✏️</span><span class="nav-item-label">Create Quiz</span></div>
+  <div class="nav-section-title">Results</div>
+  <div class="nav-item" onclick="go('leaderboard')"><span class="nav-item-icon">🏆</span><span class="nav-item-label">Leaderboard</span></div>
+  <div class="nav-item" onclick="go('analytics')"><span class="nav-item-icon">📊</span><span class="nav-item-label">Analytics</span></div>
+  <div class="nav-section-title">Group</div>
+  <div class="nav-item" onclick="go('notice')"><span class="nav-item-icon">📌</span><span class="nav-item-label">Notice Board</span></div>
+  <div class="nav-item" onclick="go('fees')"><span class="nav-item-icon">💸</span><span class="nav-item-label">Lateness Fees</span></div>
+  <div class="nav-item" onclick="go('pdfs')"><span class="nav-item-icon">📁</span><span class="nav-item-label">Study PDFs</span></div>
+  <div class="nav-item" onclick="go('pomodoro')"><span class="nav-item-icon">⏳</span><span class="nav-item-label">Focus Timer</span></div>
+</div>
+
+<main>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-announce">
+      <span class="hero-announce-icon">🌐</span>
+      <span class="hero-announce-text"><strong>Live & Shared</strong> — All 8 members see the same data in real time. Scores, fees, notices — everything syncs instantly.</span>
+    </div>
+    <div class="hero-main">
+      <div class="hero-eyebrow">Oasis Study Group</div>
+      <h1 class="hero-h1"><span class="line1">Where Minds</span><span class="line2">Grow Together</span></h1>
+      <p class="hero-desc">Your all-in-one live study hub. Take timed quizzes, climb the leaderboard, track lateness fees, and share study PDFs — all synced for the whole group.</p>
+      <div class="hero-cta">
+        <button class="cta-primary" onclick="go('quizzes')">🧠 Take a Quiz</button>
+        <button class="cta-secondary" onclick="go('create')">✏️ Create Quiz</button>
+      </div>
+    </div>
+    <div class="live-stats-bar" id="live-stats-bar">
+      <div class="live-stat"><div class="live-stat-num" id="stat-quizzes" style="color:var(--purple-l)">—</div><div class="live-stat-lbl">Quizzes</div></div>
+      <div class="live-stat"><div class="live-stat-num" id="stat-attempts" style="color:var(--blood-g)">—</div><div class="live-stat-lbl">Attempts</div></div>
+      <div class="live-stat"><div class="live-stat-num" id="stat-avg" style="color:var(--success)">—</div><div class="live-stat-lbl">Avg Score</div></div>
+    </div>
+    <div id="top-scorer-wrap" style="display:none" class="top-scorer-wrap">
+      <div class="top-scorer-trophy">🏆</div>
+      <div class="top-scorer-info">
+        <div class="top-scorer-label">Current Top Scorer</div>
+        <div class="top-scorer-name" id="top-scorer-name">—</div>
+        <div class="top-scorer-score" id="top-scorer-score"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:24px">
+      <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Our Squad</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:12px">Group Members<span style="flex:1;height:1px;background:linear-gradient(90deg,var(--border2),transparent);display:block"></span></div>
+      <div class="members-grid" id="members-grid"></div>
+    </div>
+    <div class="quick-actions">
+      <div class="action-card" onclick="go('quizzes')"><span class="action-icon">🧠</span><div class="action-title">Take a Quiz</div><div class="action-desc">Answer timed MCQs and see your score instantly with auto-marking.</div><div class="action-arrow">→</div></div>
+      <div class="action-card" onclick="go('leaderboard')"><span class="action-icon">🏆</span><div class="action-title">Leaderboard</div><div class="action-desc">See who's top of the group — scores update automatically.</div><div class="action-arrow">→</div></div>
+      <div class="action-card" onclick="go('fees')"><span class="action-icon">💸</span><div class="action-title">Lateness Fees</div><div class="action-desc">Track who owes and record payments in Naira.</div><div class="action-arrow">→</div></div>
+      <div class="action-card" onclick="go('notice')"><span class="action-icon">📌</span><div class="action-title">Notice Board</div><div class="action-desc">Post announcements and reminders for the whole group.</div><div class="action-arrow">→</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZZES -->
+<div class="page" id="page-quizzes">
+  <div class="sec-header"><div class="sec-title">📚 Quizzes</div><button class="btn btn-primary" onclick="go('create')">+ Create</button></div>
+  <div class="quiz-grid" id="quiz-grid"></div>
+</div>
+
+<!-- FLASHCARDS -->
+<div class="page" id="page-flashcards">
+  <div class="sec-header"><div class="sec-title">🃏 Flashcards</div></div>
+  <div style="display:flex;gap:9px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
+    <div style="flex:1;min-width:180px"><div class="form-label">Choose Quiz</div><select class="form-select" id="fc-quiz-select" onchange="loadFC()"><option value="">— Select —</option></select></div>
+    <button class="btn btn-secondary btn-sm" onclick="shuffleFC()">🔀</button>
+    <button class="btn btn-secondary btn-sm" onclick="resetFC()">↩</button>
+  </div>
+  <div id="fc-content" style="display:none">
+    <div class="fc-progress"><div class="fc-progress-fill" id="fc-prog"></div></div>
+    <div class="fc-stage" onclick="flipCard()">
+      <div class="fc-inner" id="fc-inner">
+        <div class="fc-face"><div class="fc-tag">Question</div><div class="fc-text" id="fc-front"></div><div class="fc-hint">Tap to reveal</div></div>
+        <div class="fc-face fc-back"><div class="fc-tag">Answer</div><div class="fc-text" id="fc-back" style="color:var(--success)"></div><div class="fc-hint">Tap to go back</div></div>
+      </div>
+    </div>
+    <div class="fc-nav"><button class="btn btn-secondary btn-sm" onclick="prevFC()">← Prev</button><div class="fc-counter" id="fc-counter">1/1</div><button class="btn btn-secondary btn-sm" onclick="nextFC()">Next →</button></div>
+  </div>
+  <div id="fc-empty" class="empty-state"><div class="icon">🃏</div><h3>Select a quiz above</h3><p>Flashcards generated from questions</p></div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="page" id="page-leaderboard">
+  <div class="sec-header"><div class="sec-title">🏆 Leaderboard</div></div>
+  <div class="lb-filter" id="lb-filter"></div>
+  <div id="lb-list"></div>
+</div>
+
+<!-- ANALYTICS -->
+<div class="page" id="page-analytics">
+  <div class="sec-header"><div class="sec-title">📊 Analytics</div></div>
+  <div class="analytics-grid" id="ana-summary"></div>
+  <div class="hard-q-section" id="hard-q-section" style="display:none">
+    <div class="hard-q-title">🔴 Questions People Fail Most</div>
+    <div id="hard-q-list"></div>
+  </div>
+  <div id="ana-breakdown"></div>
+</div>
+
+<!-- NOTICE -->
+<div class="page" id="page-notice">
+  <div class="sec-header"><div class="sec-title">📌 Notice Board</div><button class="btn btn-primary" onclick="openNoticeModal()">+ Post</button></div>
+  <div class="notice-grid" id="notice-grid"></div>
+</div>
+
+<!-- POMODORO -->
+<div class="page" id="page-pomodoro">
+  <div class="sec-header"><div class="sec-title">⏳ Focus Timer</div></div>
+  <div class="pomodoro-wrap">
+    <div class="pomodoro-clock">
+      <div class="pom-label" id="pom-label">Study Session</div>
+      <div class="pom-ring" id="pom-ring">
+        <svg viewBox="0 0 160 160" width="160" height="160">
+          <circle cx="80" cy="80" r="72"/>
+          <circle class="prog" id="pom-circle" cx="80" cy="80" r="72" stroke-dashoffset="0"/>
+        </svg>
+        <div class="pom-time" id="pom-time">25:00</div>
+      </div>
+      <div class="pom-mode study" id="pom-mode">Focus Time</div>
+      <div class="pom-controls">
+        <button class="btn btn-primary btn-sm" id="pom-btn" onclick="togglePom()">▶ Start</button>
+        <button class="btn btn-secondary btn-sm" onclick="resetPom()">↩ Reset</button>
+      </div>
+      <div class="pom-sessions" style="margin-top:12px">Sessions: <span id="pom-sess">0</span>/4</div>
+      <div class="pom-dots" id="pom-dots" style="margin-top:6px"></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px">📚 Study Tips</div>
+      <div style="font-size:.8rem;color:var(--muted);line-height:1.7">• 25 min focus, 5 min break<br>• Remove distractions first<br>• Review notes right after session<br>• Sleep consolidates memories<br>• Test yourself — don't just re-read</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEES -->
+<div class="page" id="page-fees">
+  <div class="sec-header">
+    <div class="sec-title">💸 Lateness Fees</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted)">Currency: ₦ Naira</div>
+      <button class="btn btn-secondary btn-sm" onclick="openAdminPanel()" style="border-color:var(--blood);color:var(--blood-g)">🔐 Admin</button>
+    </div>
+  </div>
+  <p style="font-size:.8rem;color:var(--muted);margin-bottom:18px;line-height:1.6">Track lateness fines in Naira. Add fines and record payments — synced live for all members.</p>
+  <div class="fee-summary" id="fee-summary"></div>
+  <div class="fee-member-grid" id="fee-member-grid"></div>
+</div>
+
+<!-- PDFs -->
+<div class="page" id="page-pdfs">
+  <div class="sec-header"><div class="sec-title">📁 Study PDFs</div></div>
+  <div class="add-section-form" style="margin-bottom:16px">
+    <div style="flex:1"><div class="form-label">New Section Name</div><input class="form-input" id="new-section-name" placeholder="e.g. Anatomy, Past Papers..."/></div>
+    <button class="btn btn-primary" onclick="addPDFSection()">+ Add Section</button>
+  </div>
+  <div class="pdf-section-wrap" id="pdf-section-wrap"></div>
+</div>
+
+<!-- CREATE -->
+<div class="page" id="page-create">
+  <div class="sec-header"><div class="sec-title">✏️ Create Quiz</div><button class="btn btn-secondary btn-sm" onclick="go('quizzes')">← Back</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+    <div class="form-group" style="margin:0"><label class="form-label">Quiz Title</label><input class="form-input" id="quiz-title" placeholder="e.g. Anatomy MCQs"/></div>
+    <div class="form-group" style="margin:0"><label class="form-label">Description</label><input class="form-input" id="quiz-desc" placeholder="Optional"/></div>
+    <div class="form-group" style="margin:0"><label class="form-label">Time Limit (mins)</label><input class="form-input" id="quiz-time" type="number" min="1" max="180" value="10"/></div>
+    <div class="form-group" style="margin:0"><label class="form-label">Passing Score (%)</label><input class="form-input" id="quiz-pass" type="number" min="0" max="100" value="70"/></div>
+  </div>
+  <div class="bulk-importer">
+    <div class="bulk-importer-title">📋 Paste All Questions Here</div>
+    <p style="font-size:.78rem;color:var(--muted);line-height:1.6;margin-bottom:12px">Paste any number of questions at once. Use <strong style="color:var(--success)">Answer: 2</strong> (number) at the end of each question. Blank lines between options are fine.</p>
+    <div class="bulk-format-box"><span class="hl">1.</span> What is the powerhouse of the cell?
+<span class="hl">1)</span> Brain
+<span class="hl">2)</span> Mitochondria
+<span class="hl">3)</span> Nucleus
+<span class="hl">4)</span> Heart
+<span class="hl2">Answer: 2</span>
+
+<span class="hl">2.</span> Next question here...</div>
+    <textarea class="bulk-textarea" id="bulk-input" placeholder="Paste your questions here..."></textarea>
+    <div style="display:flex;gap:9px;margin-top:11px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-secondary btn-sm" onclick="previewBulk()">👁 Preview</button>
+      <button class="btn btn-primary" onclick="saveQuiz()">🚀 Save Quiz</button>
+      <span id="q-count-label" style="font-family:'DM Mono',monospace;font-size:.74rem;color:var(--muted)"></span>
+    </div>
+    <div id="bulk-preview" class="bulk-preview"></div>
+    <div id="bulk-error" style="display:none" class="parse-error"></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- PRE QUIZ NAME MODAL -->
+<div class="modal-overlay" id="pre-quiz-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title">Who is taking this quiz?</div>
+      <button class="modal-close" onclick="document.getElementById('pre-quiz-modal').classList.remove('open');activeQuiz=null">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Quiz: <strong id="pre-quiz-name" style="color:var(--text)"></strong></p>
+      <div class="form-group"><label class="form-label">Your Name</label>
+        <select class="form-select" id="pre-player-select"><option value="">— Choose —</option></select>
+      </div>
+      <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center" onclick="beginQuiz()">Start Quiz →</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ MODAL -->
+<div class="modal-overlay" id="quiz-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-quiz-title">Quiz</div>
+      <button class="modal-close" onclick="closeQuizModal()">✕</button>
+    </div>
+    <div class="modal-body" id="quiz-modal-body"></div>
+  </div>
+</div>
+
+<!-- NOTICE MODAL -->
+<div class="modal-overlay" id="notice-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">📌 Post Notice</div>
+      <button class="modal-close" onclick="document.getElementById('notice-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Your Name</label><select class="form-select" id="notice-author"><option value="">— Select —</option></select></div>
+      <div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="notice-text" style="min-height:80px" placeholder="Type your message..."></textarea></div>
+      <div class="form-group"><label class="form-label">Colour</label><select class="form-select" id="notice-color"><option value="purple">🟣 Purple</option><option value="yellow">🟡 Yellow</option><option value="red">🔴 Red</option><option value="green">🟢 Green</option></select></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="postNotice()">Post Notice</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="admin-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Admin Panel — Fees</div>
+      <button class="modal-close" onclick="closeAdminModal()">✕</button>
+    </div>
+    <div class="modal-body" id="admin-modal-body"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<canvas class="confetti-canvas" id="confetti-canvas" style="display:none"></canvas>
+
+<script>
+// ══ SUPABASE ══
+const SUPA_URL='https://yururhswbeozcazlzdjb.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1cnVyaHN3YmVvemNhemx6ZGpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjQ4NzYsImV4cCI6MjA5Mjk0MDg3Nn0._qdKntfLVcOhyhhoZUggnVcQenR1bfQ-lIqNbGKbHG0';
+const H={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=representation'};
+async function db(table,method='GET',body=null,query=''){
+  setSyncing(true);
+  try{const res=await fetch(`${SUPA_URL}/rest/v1/${table}${query}`,{method,headers:H,body:body?JSON.stringify(body):null});
+    const data=await res.json();setSyncing(false);
+    if(!res.ok)throw new Error(JSON.stringify(data));return data;
+  }catch(e){setSyncing(false,true);throw e;}
+}
+const dbGet=(t,q='')=>db(t,'GET',null,q);
+const dbPost=(t,b)=>db(t,'POST',b);
+const dbPatch=(t,b,q)=>db(t,'PATCH',b,q);
+const dbDelete=(t,q)=>db(t,'DELETE',null,q);
+function setSyncing(on,err=false){
+  const d=document.getElementById('sync-dot'),t=document.getElementById('sync-text');
+  if(!d)return;
+  if(err){d.className='sync-dot error';t.textContent='Error';}
+  else if(on){d.className='sync-dot syncing';t.textContent='Syncing...';}
+  else{d.className='sync-dot';t.textContent='Live';}
+}
+
+// ══ CONSTANTS ══
+const MEMBERS=[{name:'Elisha',role:'Group Lead'},{name:'Charles',role:'Member'},{name:'Nancy',role:'Member'},{name:'Precious',role:'Member'},{name:'Pearl',role:'Member'},{name:'Annie',role:'Member'},{name:'Paula',role:'Member'},{name:'Faith',role:'Member'}];
+const COLORS=[['#7c3aed','#a855f7'],['#8b1a1a','#c0392b'],['#1d4ed8','#60a5fa'],['#065f46','#34d399'],['#92400e','#fbbf24'],['#701a75','#e879f9'],['#1e3a5f','#7dd3fc'],['#3b0764','#c084fc']];
+
+// State
+let quizzes=[],scores=[],notices=[],feesData={},pdfsData=[],pdfSections=[];
+let activeQuiz=null,timerInterval=null,timeLeft=0,userAnswers={},pendingPlayer='';
+let fcCards=[],fcIdx=0;
+let pomRunning=false,pomIsBreak=false,pomTime=25*60,pomTotal=25*60,pomInterval=null,pomSessions=0;
+let selectedLBQuiz='all';
+// Track per-question wrong answers: {quizId_qIdx: {text, wrong, total}}
+let questionStats={};
+
+// ══ NAV ══
+function toggleNav(){
+  const btn=document.getElementById('hamburger-btn');
+  const nav=document.getElementById('slide-nav');
+  const overlay=document.getElementById('nav-overlay');
+  btn.classList.toggle('open');nav.classList.toggle('open');overlay.classList.toggle('open');
+}
+function closeNav(){
+  document.getElementById('hamburger-btn').classList.remove('open');
+  document.getElementById('slide-nav').classList.remove('open');
+  document.getElementById('nav-overlay').classList.remove('open');
+}
+const PAGE_LOADERS={quizzes:loadQuizzes,leaderboard:loadLeaderboard,analytics:loadAnalytics,notice:loadNotices,fees:loadFees,pdfs:loadPDFs,flashcards:()=>loadQuizzes()};
+function go(p){
+  closeNav();
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(x=>{if(x.getAttribute('onclick')?.includes("'"+p+"'"))x.classList.add('active');});
+  if(PAGE_LOADERS[p])PAGE_LOADERS[p]();
+}
+function showPage(p){go(p);}
+
+// ══ TOAST & CONFETTI ══
+function toast(msg,type='success'){
+  const t=document.createElement('div');t.className=`toast ${type}`;
+  t.innerHTML=(type==='success'?'✓ ':type==='error'?'✕ ':'ℹ ')+msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+function confetti(){
+  const c=document.getElementById('confetti-canvas');c.style.display='block';c.width=innerWidth;c.height=innerHeight;
+  const ctx=c.getContext('2d');
+  const p=Array.from({length:130},()=>({x:Math.random()*c.width,y:-10,r:Math.random()*7+3,col:`hsl(${Math.random()*360},80%,60%)`,rot:Math.random()*360,vx:(Math.random()-.5)*4,vy:Math.random()*5+3,vr:Math.random()*6-3}));
+  let f=0;function draw(){ctx.clearRect(0,0,c.width,c.height);p.forEach(x=>{x.x+=x.vx;x.y+=x.vy;x.rot+=x.vr;ctx.save();ctx.translate(x.x,x.y);ctx.rotate(x.rot*Math.PI/180);ctx.fillStyle=x.col;ctx.fillRect(-x.r/2,-x.r/2,x.r,x.r);ctx.restore();});f++;if(f<100)requestAnimationFrame(draw);else c.style.display='none';}
+  draw();
+}
+
+// ══ MEMBERS ══
+function renderMembers(){
+  document.getElementById('members-grid').innerHTML=MEMBERS.map((m,i)=>{
+    const[c1,c2]=COLORS[i];
+    // Find best score for member
+    const ms=scores.filter(s=>s.player_name===m.name);
+    const best=ms.length?Math.max(...ms.map(s=>s.score)):null;
+    return`<div class="member-card">
+      <div class="member-avatar" style="background:linear-gradient(135deg,${c1},${c2})">${m.name[0]}<span class="member-num">${i+1}</span></div>
+      <div class="member-name">${m.name}</div>
+      <div class="member-role">${m.role}</div>
+      ${best!==null?`<div class="member-score">Best: ${best}%</div>`:''}
+    </div>`;
+  }).join('');
+}
+function populateSelects(){
+  const opts=MEMBERS.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+  ['pre-player-select','notice-author'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">— Choose —</option>'+opts;});
+}
+function updateHomeStats(){
+  document.getElementById('stat-quizzes').textContent=quizzes.length;
+  document.getElementById('stat-attempts').textContent=scores.length;
+  const avg=scores.length?Math.round(scores.reduce((a,s)=>a+s.score,0)/scores.length):0;
+  document.getElementById('stat-avg').textContent=scores.length?avg+'%':'—';
+  // Top scorer
+  if(scores.length){
+    const byName={};scores.forEach(s=>{if(!byName[s.player_name]||s.score>byName[s.player_name])byName[s.player_name]=s.score;});
+    const top=Object.entries(byName).sort((a,b)=>b[1]-a[1])[0];
+    if(top){
+      document.getElementById('top-scorer-wrap').style.display='flex';
+      document.getElementById('top-scorer-name').textContent=top[0];
+      document.getElementById('top-scorer-score').textContent='Best score: '+top[1]+'%';
+    }
+  }
+}
+
+// ══ BULK PARSER ══
+function parseBulk(text){
+  const questions=[];const errors=[];
+  const clean=text.replace(/\*\*/g,'').replace(/^-{2,}$/gm,'').replace(/^#{1,6}\s*/gm,'');
+  const lines=clean.split('\n').map(l=>l.trim());
+  let blocks=[];let cur=null;
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i];if(!l)continue;
+    if(/^answer\s*[:=]\s*([1-4abcdABCD])/i.test(l)){
+      if(cur){const am=l.match(/^answer\s*[:=]\s*([1-4abcdABCD])/i);const av=am[1].toLowerCase();cur.ans=['a','b','c','d'].includes(av)?['a','b','c','d'].indexOf(av)+1:parseInt(av);}
+      continue;
+    }
+    const om=l.match(/^[1-4abcdABCD][.)]\s+(.+)/i);
+    if(om&&cur){cur.opts.push(om[1].trim());continue;}
+    const qm=l.match(/^(\d+)[.)]\s+(.+)/);
+    if(qm){
+      const num=parseInt(qm[1]);const txt=qm[2].trim();
+      const isOpt=num>=1&&num<=4&&cur&&cur.opts.length<4&&!cur.ans;
+      if(isOpt){cur.opts.push(txt);}
+      else{if(cur)blocks.push(cur);cur={num,txt,opts:[],ans:null};}
+      continue;
+    }
+  }
+  if(cur)blocks.push(cur);
+  blocks.forEach((b,i)=>{
+    if(!b.txt)return;
+    if(b.opts.length<2){errors.push('Q'+(i+1)+' "'+b.txt.slice(0,28)+'": only '+b.opts.length+' option(s)');return;}
+    if(!b.ans){errors.push('Q'+(i+1)+' "'+b.txt.slice(0,28)+'": missing Answer: N');return;}
+    if(b.ans<1||b.ans>b.opts.length){errors.push('Q'+(i+1)+': answer out of range');return;}
+    questions.push({text:b.txt,options:b.opts,correct:b.ans-1});
+  });
+  return{questions,errors};
+}
+function previewBulk(){
+  const{questions,errors}=parseBulk(document.getElementById('bulk-input').value);
+  const errEl=document.getElementById('bulk-error');const prevEl=document.getElementById('bulk-preview');
+  document.getElementById('q-count-label').textContent=questions.length?'✓ '+questions.length+' questions':'';
+  if(errors.length){errEl.style.display='block';errEl.innerHTML='⚠ Errors:<br>'+errors.map(e=>'• '+e).join('<br>');}else{errEl.style.display='none';}
+  if(questions.length){
+    prevEl.style.display='block';
+    prevEl.innerHTML='<div class="bulk-preview-title">Preview ('+questions.length+' questions)</div>'+
+      questions.slice(0,3).map((q,i)=>`<div class="preview-q"><div class="preview-q-text">${i+1}. ${q.text}</div><div class="preview-q-opts">${q.options.map((o,oi)=>`<div class="preview-opt ${oi===q.correct?'correct':''}">${oi===q.correct?'✓ ':''}${['A','B','C','D'][oi]}. ${o}</div>`).join('')}</div></div>`).join('')+
+      (questions.length>3?`<div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);padding:6px">...and ${questions.length-3} more</div>`:'');
+  }else{prevEl.style.display='none';}
+}
+async function saveQuiz(){
+  const title=document.getElementById('quiz-title').value.trim();
+  const desc=document.getElementById('quiz-desc').value.trim();
+  const time=parseInt(document.getElementById('quiz-time').value)||10;
+  const pass=parseInt(document.getElementById('quiz-pass').value)||70;
+  const text=document.getElementById('bulk-input').value;
+  if(!title){toast('Enter a quiz title','error');return;}
+  if(!text.trim()){toast('Paste your questions first','error');return;}
+  const{questions,errors}=parseBulk(text);
+  if(!questions.length){toast('No valid questions found — check format','error');previewBulk();return;}
+  try{
+    await dbPost('quizzes',{title,description:desc,time_limit:time,pass_score:pass,questions});
+    toast('Quiz saved with '+questions.length+' questions! 🎉');
+    document.getElementById('quiz-title').value='';document.getElementById('quiz-desc').value='';
+    document.getElementById('bulk-input').value='';document.getElementById('bulk-preview').style.display='none';
+    document.getElementById('q-count-label').textContent='';
+    go('quizzes');
+  }catch(e){toast('Failed to save','error');}
+}
+
+// ══ QUIZZES ══
+async function loadQuizzes(){
+  try{quizzes=await dbGet('quizzes','?order=created_at.desc');scores=await dbGet('scores','?order=score.desc');renderQuizzes();populateFCSelect();updateHomeStats();renderMembers();}
+  catch(e){toast('Could not load quizzes','error');}
+}
+function renderQuizzes(){
+  const grid=document.getElementById('quiz-grid');
+  if(!quizzes.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">🧪</div><h3>No quizzes yet</h3><p>Create your first quiz!</p></div>`;return;}
+  grid.innerHTML=quizzes.map(q=>`<div class="quiz-card">
+    <h3>${q.title}</h3><p>${q.description||'No description'}</p>
+    <div class="quiz-meta"><span class="badge badge-t">⏱ ${q.time_limit}m</span><span class="badge badge-q">❓ ${q.questions.length}Qs</span><span class="badge badge-p">✅ ${q.pass_score}%</span></div>
+    <div class="card-actions">
+      <button class="btn btn-primary btn-sm" onclick="startQuiz(${q.id})">Start →</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadFCById(${q.id})">🃏 Flash</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteQuiz(${q.id})">✕</button>
+    </div>
+  </div>`).join('');
+}
+async function deleteQuiz(id){
+  if(!confirm('Delete this quiz?'))return;
+  try{await dbDelete('quizzes','?id=eq.'+id);toast('Deleted');loadQuizzes();}catch(e){toast('Failed','error');}
+}
+
+// ══ QUIZ TAKING ══
+function startQuiz(id){
+  activeQuiz=quizzes.find(q=>q.id===id);if(!activeQuiz)return;
+  document.getElementById('pre-quiz-name').textContent=activeQuiz.title;
+  document.getElementById('pre-player-select').value='';
+  document.getElementById('pre-quiz-modal').classList.add('open');
+}
+function beginQuiz(){
+  const name=document.getElementById('pre-player-select').value;
+  if(!name){toast('Select your name first','error');return;}
+  pendingPlayer=name;
+  document.getElementById('pre-quiz-modal').classList.remove('open');
+  userAnswers={};timeLeft=activeQuiz.time_limit*60;
+  document.getElementById('modal-quiz-title').textContent=activeQuiz.title+' · '+name;
+  document.getElementById('quiz-modal').classList.add('open');
+  renderQuizQs();startTimer();
+}
+function closeQuizModal(){clearInterval(timerInterval);document.getElementById('quiz-modal').classList.remove('open');activeQuiz=null;}
+function startTimer(){clearInterval(timerInterval);updateTimer();timerInterval=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0){clearInterval(timerInterval);submitQuiz(true);}},1000);}
+function updateTimer(){const el=document.getElementById('timer-el');if(!el)return;const m=Math.floor(timeLeft/60),s=timeLeft%60;el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');el.className='timer-display'+(timeLeft<60?' danger':timeLeft<180?' warning':'');}
+function renderQuizQs(){
+  const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
+  document.getElementById('quiz-modal-body').innerHTML=`
+    <div class="quiz-header-bar"><div class="quiz-title-bar">${activeQuiz.title}</div><div id="timer-el" class="timer-display">--:--</div></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="pbar" style="width:${pct}%"></div></div>
+    ${activeQuiz.questions.map((q,qi)=>`<div class="question-block">
+      <div class="question-num">Question ${qi+1} of ${activeQuiz.questions.length}</div>
+      <div class="question-text">${q.text}</div>
+      <div class="options-choices">${q.options.map((o,oi)=>`<button class="choice-btn ${userAnswers[qi]===oi?'selected':''}" onclick="pickAns(${qi},${oi})"><span class="choice-letter">${['A','B','C','D'][oi]}</span>${o}</button>`).join('')}</div>
+    </div>`).join('')}
+    <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:8px" onclick="submitQuiz(false)">Submit Quiz ✓</button>`;
+  updateTimer();
+}
+function pickAns(qi,oi){
+  userAnswers[qi]=oi;
+  const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
+  const pb=document.getElementById('pbar');if(pb)pb.style.width=pct+'%';
+  document.querySelectorAll('.question-block')[qi]?.querySelectorAll('.choice-btn').forEach((b,i)=>b.classList.toggle('selected',i===oi));
+}
+async function submitQuiz(timeout=false){
+  clearInterval(timerInterval);
+  let correct=0;
+  // Track wrong answers per question
+  activeQuiz.questions.forEach((q,i)=>{
+    const ua=userAnswers[i];const isC=ua===q.correct;
+    if(isC)correct++;
+    const key=activeQuiz.id+'_'+i;
+    if(!questionStats[key])questionStats[key]={text:q.text,wrong:0,total:0,quizTitle:activeQuiz.title};
+    questionStats[key].total++;
+    if(!isC)questionStats[key].wrong++;
+  });
+  const total=activeQuiz.questions.length,pct=Math.round(correct/total*100),passed=pct>=activeQuiz.pass_score;
+  if(passed)confetti();
+  // AUTO SAVE TO LEADERBOARD
+  try{
+    await dbPost('scores',{quiz_id:activeQuiz.id,quiz_title:activeQuiz.title,player_name:pendingPlayer,score:pct,correct,total,passed});
+    toast(pendingPlayer+' — score saved! 🏆');
+  }catch(e){toast('Score could not save','error');}
+  document.getElementById('quiz-modal-body').innerHTML=`
+    ${timeout?'<div style="background:rgba(139,26,26,.15);border:1px solid rgba(192,57,43,.3);border-radius:8px;padding:9px 13px;margin-bottom:13px;font-size:.78rem;color:var(--blood-g)">⏱ Time\'s up! Auto-submitted.</div>':''}
+    <div class="results-box">
+      <div class="score-ring" style="--pct:${pct}%"><div class="score-inner"><div class="score-num" style="color:${passed?'var(--success)':'var(--blood-g)'}">${pct}%</div><div class="score-label">${passed?'PASSED':'FAILED'}</div></div></div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:5px">${passed?'🎉 Well done, '+pendingPlayer+'!':'📖 Keep studying, '+pendingPlayer+'!'}</h2>
+      <p style="color:var(--muted);font-size:.76rem">Score automatically saved to leaderboard ✓</p>
+      <div class="results-stats">
+        <div class="r-stat"><div class="r-stat-num" style="color:var(--success)">${correct}</div><div class="r-stat-lbl">Correct</div></div>
+        <div class="r-stat"><div class="r-stat-num" style="color:var(--blood-g)">${total-correct}</div><div class="r-stat-lbl">Wrong</div></div>
+        <div class="r-stat"><div class="r-stat-num">${total}</div><div class="r-stat-lbl">Total</div></div>
+      </div>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.88rem;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Answer Review</div>
+    <div class="review-list">${activeQuiz.questions.map((q,i)=>{const ua=userAnswers[i],isC=ua===q.correct;return`<div class="review-item ${isC?'correct-ans':'wrong-ans'}"><div class="review-q">${i+1}. ${q.text}</div><div class="review-options">${q.options.map((o,oi)=>{let cl='neutral';if(oi===q.correct)cl='correct-opt';else if(oi===ua&&!isC)cl='wrong-opt';return`<div class="review-opt ${cl}">${['A','B','C','D'][oi]}. ${o}${oi===q.correct?' ✓':''}${oi===ua&&!isC?' ✗':''}</div>`;}).join('')}</div></div>`;}).join('')}</div>
+    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:13px" onclick="closeQuizModal()">Close</button>`;
+}
+
+// ══ LEADERBOARD ══
+async function loadLeaderboard(){
+  try{quizzes=await dbGet('quizzes','?order=created_at.desc');scores=await dbGet('scores','?order=score.desc');renderLeaderboard();}
+  catch(e){toast('Could not load leaderboard','error');}
+}
+function renderLeaderboard(){
+  const fEl=document.getElementById('lb-filter');
+  fEl.innerHTML=`<button class="lb-btn ${selectedLBQuiz==='all'?'active':''}" onclick="selLB('all')">All</button>`+
+    quizzes.map(q=>`<button class="lb-btn ${selectedLBQuiz==q.id?'active':''}" onclick="selLB(${q.id})">${q.title}</button>`).join('');
+  let filtered=selectedLBQuiz==='all'?scores:scores.filter(s=>s.quiz_id==selectedLBQuiz);
+  const byName={};
+  filtered.forEach(s=>{if(!byName[s.player_name])byName[s.player_name]={name:s.player_name,scores:[],best:0,attempts:0};byName[s.player_name].scores.push(s.score);byName[s.player_name].best=Math.max(byName[s.player_name].best,s.score);byName[s.player_name].attempts++;});
+  const entries=Object.values(byName).map(e=>({...e,avg:Math.round(e.scores.reduce((a,b)=>a+b,0)/e.scores.length)})).sort((a,b)=>b.avg-a.avg);
+  const lbEl=document.getElementById('lb-list');
+  if(!entries.length){lbEl.innerHTML=`<div class="empty-state"><div class="icon">🏆</div><h3>No scores yet</h3><p>Take a quiz to appear here!</p></div>`;return;}
+  const max=entries[0].avg||1;const medals=['🥇','🥈','🥉'];
+  lbEl.innerHTML=`<div class="leaderboard-list">${entries.map((e,i)=>{
+    const mi=MEMBERS.findIndex(m=>m.name===e.name);const[c1,c2]=COLORS[mi>=0?mi:i%COLORS.length];
+    return`<div class="lb-row">
+      <div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i<3?medals[i]:i+1}</div>
+      <div class="lb-avatar" style="background:linear-gradient(135deg,${c1},${c2})">${e.name[0]}</div>
+      <div class="lb-info"><div class="lb-name">${e.name}</div>
+        <div class="lb-detail">Avg: ${e.avg}% · Best: ${e.best}% · ${e.attempts} attempt${e.attempts!==1?'s':''}</div>
+        <div class="lb-bar-wrap"><div class="lb-bar" style="width:${(e.avg/max*100).toFixed(1)}%"></div></div>
+      </div>
+      <div class="lb-score">${e.avg}%</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function selLB(id){selectedLBQuiz=id;renderLeaderboard();}
+
+// ══ ANALYTICS ══
+async function loadAnalytics(){
+  try{quizzes=await dbGet('quizzes','?order=created_at.desc');scores=await dbGet('scores','?order=score.desc');renderAnalytics();}
+  catch(e){toast('Could not load analytics','error');}
+}
+function renderAnalytics(){
+  const totalAttempts=scores.length;
+  const avgScore=totalAttempts?Math.round(scores.reduce((a,s)=>a+s.score,0)/totalAttempts):0;
+  const passCount=scores.filter(s=>s.passed).length;
+  const passRate=totalAttempts?Math.round(passCount/totalAttempts*100):0;
+  document.getElementById('ana-summary').innerHTML=`
+    <div class="ana-card"><div class="ana-num" style="color:var(--purple-l)">${quizzes.length}</div><div class="ana-lbl">Total Quizzes</div></div>
+    <div class="ana-card"><div class="ana-num" style="color:var(--blood-g)">${totalAttempts}</div><div class="ana-lbl">Total Attempts</div></div>
+    <div class="ana-card"><div class="ana-num" style="color:var(--success)">${avgScore}%</div><div class="ana-lbl">Avg Score</div></div>
+    <div class="ana-card"><div class="ana-num" style="color:var(--warn)">${passRate}%</div><div class="ana-lbl">Pass Rate</div></div>`;
+
+  // Most failed questions from questionStats
+  const hardQs=Object.values(questionStats).filter(q=>q.total>0).sort((a,b)=>(b.wrong/b.total)-(a.wrong/a.total)).slice(0,5);
+  const hqSection=document.getElementById('hard-q-section');
+  const hqList=document.getElementById('hard-q-list');
+  if(hardQs.length){
+    hqSection.style.display='block';
+    hqList.innerHTML=hardQs.map((q,i)=>{
+      const failRate=Math.round(q.wrong/q.total*100);
+      return`<div class="hard-q-item">
+        <div class="hard-q-text">${i+1}. ${q.text}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);margin-bottom:5px">from: ${q.quizTitle}</div>
+        <div class="hard-q-bar-wrap"><div class="hard-q-bar" style="width:${failRate}%"></div></div>
+        <div class="hard-q-stat"><span>${failRate}% fail rate</span> · ${q.wrong}/${q.total} got it wrong</div>
+      </div>`;
+    }).join('');
+  }else{hqSection.style.display='none';}
+
+  if(!quizzes.length){document.getElementById('ana-breakdown').innerHTML=`<div class="empty-state"><div class="icon">📊</div><h3>No data yet</h3><p>Take quizzes to see analytics</p></div>`;return;}
+  document.getElementById('ana-breakdown').innerHTML=`<div style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:11px;margin-top:4px">Quiz Breakdown</div>`+
+    quizzes.map(q=>{
+      const qs=scores.filter(s=>s.quiz_id===q.id);
+      const avg=qs.length?Math.round(qs.reduce((a,s)=>a+s.score,0)/qs.length):0;
+      return`<div class="ana-quiz-row">
+        <div class="ana-quiz-title">${q.title}</div>
+        <div class="ana-mini-stats">
+          <div class="ana-mini">Attempts: <span>${qs.length}</span></div>
+          <div class="ana-mini">Avg: <span>${avg}%</span></div>
+          <div class="ana-mini">Questions: <span>${q.questions.length}</span></div>
+          <div class="ana-mini">Time: <span>${q.time_limit}m</span></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// ══ NOTICES ══
+async function loadNotices(){try{notices=await dbGet('notices','?order=created_at.desc');renderNotices();}catch(e){toast('Could not load notices','error');}}
+function openNoticeModal(){document.getElementById('notice-modal').classList.add('open');}
+function renderNotices(){
+  const grid=document.getElementById('notice-grid');
+  if(!notices.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="icon">📌</div><h3>No notices</h3><p>Post an announcement!</p></div>`;return;}
+  grid.innerHTML=notices.map(n=>`<div class="notice-card ${n.color}">
+    <button class="notice-del" onclick="delNotice(${n.id})">✕</button>
+    <div class="notice-author">📌 ${n.author}</div>
+    <div class="notice-text">${n.message}</div>
+    <div class="notice-date">${new Date(n.created_at).toLocaleDateString()}</div>
+  </div>`).join('');
+}
+async function postNotice(){
+  const author=document.getElementById('notice-author').value;const message=document.getElementById('notice-text').value.trim();const color=document.getElementById('notice-color').value;
+  if(!author){toast('Select your name','error');return;}if(!message){toast('Write a message','error');return;}
+  try{await dbPost('notices',{author,message,color});document.getElementById('notice-modal').classList.remove('open');document.getElementById('notice-text').value='';toast('Posted! 📌');loadNotices();}
+  catch(e){toast('Failed','error');}
+}
+async function delNotice(id){try{await dbDelete('notices','?id=eq.'+id);toast('Removed');loadNotices();}catch(e){toast('Failed','error');}}
+
+// ══ FEES ══
+const CUR='₦';
+async function loadFees(){
+  try{
+    const data=await dbGet('fees','');const logs=await dbGet('fee_logs','?order=created_at.desc');
+    feesData={};data.forEach(f=>feesData[f.member_name]={...f,logs:logs.filter(l=>l.member_name===f.member_name)});
+    renderFees();
+  }catch(e){toast('Could not load fees','error');}
+}
+function renderFees(){
+  let totalOwed=0,totalPaid=0,cleared=0;
+  MEMBERS.forEach(m=>{const d=feesData[m.name]||{balance:0,logs:[]};if(d.balance>0)totalOwed+=Number(d.balance);(d.logs||[]).forEach(l=>{if(l.type==='pay')totalPaid+=Number(l.amount);});if(!d.balance||d.balance<=0)cleared++;});
+  document.getElementById('fee-summary').innerHTML=`
+    <div class="fee-sum-card"><div class="fee-sum-num" style="color:var(--blood-g)">${CUR}${totalOwed.toFixed(2)}</div><div class="fee-sum-lbl">Outstanding</div></div>
+    <div class="fee-sum-card"><div class="fee-sum-num" style="color:var(--success)">${CUR}${totalPaid.toFixed(2)}</div><div class="fee-sum-lbl">Total Paid</div></div>
+    <div class="fee-sum-card"><div class="fee-sum-num" style="color:var(--purple-l)">${cleared}/${MEMBERS.length}</div><div class="fee-sum-lbl">Cleared</div></div>`;
+  document.getElementById('fee-member-grid').innerHTML=MEMBERS.map((m,i)=>{
+    const[c1,c2]=COLORS[i];const d=feesData[m.name]||{balance:0,logs:[]};const bal=Number(d.balance)||0;const owed=bal>0;
+    const logs=(d.logs||[]).slice(0,5);
+    return`<div class="fee-card ${owed?'owed':'clear'}">
+      <div class="fee-card-top"><div class="fee-avatar" style="background:linear-gradient(135deg,${c1},${c2})">${m.name[0]}</div>
+        <div><div class="fee-name">${m.name}</div><div class="fee-status ${owed?'owed':'clear'}">${owed?'Owes fee':'Clear ✓'}</div></div>
+      </div>
+      <div class="fee-amount-display ${owed?'owed':'clear'}">${CUR}${Math.abs(bal).toFixed(2)}</div>
+      <div class="fee-amount-lbl">${owed?'Currently Owes':'Balance'}</div>
+      <div class="fee-controls">
+        <input class="fee-input" id="fi-${i}" type="number" min="0" step="0.01" placeholder="Amount"/>
+        <button class="btn btn-danger btn-sm" onclick="addFine('${m.name}',${i})">+Fine</button>
+        <button class="btn btn-success btn-sm" onclick="payFee('${m.name}',${i})">✓Paid</button>
+      </div>
+      <div class="fee-log"><div class="fee-log-title">History</div>
+        <div class="fee-log-list">${logs.length?logs.map(l=>`<div class="fee-log-item"><span style="font-size:.6rem;color:var(--muted)">${l.type==='pay'?'paid':'fined'}</span><span class="fee-log-amt ${l.type==='pay'?'pay':'add'}">${l.type==='pay'?'-':'+'}${CUR}${Number(l.amount).toFixed(2)}</span><span class="fee-log-date">${new Date(l.created_at).toLocaleDateString()}</span><button onclick="adminDelete(${l.id},'${l.member_name}',${l.amount},'${l.type}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.65rem;padding:1px 5px;border-radius:4px;transition:all .2s" onmouseover="this.style.color='var(--blood-g)'" onmouseout="this.style.color='var(--muted)'">✕</button></div>`).join(''):'<div style="font-size:.72rem;color:var(--muted);padding:3px 7px">No entries</div>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function addFine(name,i){
+  const val=parseFloat(document.getElementById('fi-'+i).value);if(isNaN(val)||val<=0){toast('Enter amount','error');return;}
+  try{
+    const ex=feesData[name];const nb=(Number(ex?.balance)||0)+val;
+    if(ex)await dbPatch('fees',{balance:nb,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:nb});
+    await dbPost('fee_logs',{member_name:name,type:'fine',amount:val});
+    toast('Added '+CUR+val.toFixed(2)+' fine for '+name,'error');document.getElementById('fi-'+i).value='';await loadFees();
+  }catch(e){toast('Failed','error');}
+}
+async function payFee(name,i){
+  const val=parseFloat(document.getElementById('fi-'+i).value);if(isNaN(val)||val<=0){toast('Enter amount','error');return;}
+  try{
+    const ex=feesData[name];const nb=Math.max(0,(Number(ex?.balance)||0)-val);
+    if(ex)await dbPatch('fees',{balance:nb,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:nb});
+    await dbPost('fee_logs',{member_name:name,type:'pay',amount:val});
+    toast(name+' paid '+CUR+val.toFixed(2)+' ✓');document.getElementById('fi-'+i).value='';
+    if(nb===0)confetti();await loadFees();
+  }catch(e){toast('Failed','error');}
+}
+
+// ══ PDF SECTIONS ══
+async function loadPDFs(){
+  try{
+    pdfsData=await dbGet('pdfs','?order=created_at.desc');
+    const stored=localStorage.getItem('oasis_pdf_sections');
+    pdfSections=stored?JSON.parse(stored):[{id:'general',name:'General Materials',color:'#7c3aed'}];
+    renderPDFSections();
+  }catch(e){toast('Could not load PDFs','error');}
+}
+function savePDFSections(){localStorage.setItem('oasis_pdf_sections',JSON.stringify(pdfSections));}
+function addPDFSection(){
+  const name=document.getElementById('new-section-name').value.trim();
+  if(!name){toast('Enter a section name','error');return;}
+  pdfSections.push({id:'sec_'+Date.now(),name,color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0')});
+  savePDFSections();document.getElementById('new-section-name').value='';renderPDFSections();toast('Section added!');
+}
+function renderPDFSections(){
+  const wrap=document.getElementById('pdf-section-wrap');
+  if(!pdfSections.length){wrap.innerHTML=`<div class="empty-state"><div class="icon">📁</div><h3>No sections yet</h3><p>Add a section above to organise your PDFs</p></div>`;return;}
+  wrap.innerHTML=pdfSections.map(sec=>{
+    const secPdfs=pdfsData.filter(p=>p.section_id===sec.id);
+    return`<div class="pdf-section-card">
+      <div class="pdf-section-header">
+        <div class="pdf-section-name"><span style="color:${sec.color}">▌</span>${sec.name}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pdf-section-count">${secPdfs.length} file${secPdfs.length!==1?'s':''}</span>
+          ${sec.id!=='general'?`<button class="btn btn-danger btn-sm" onclick="deletePDFSection('${sec.id}')">✕</button>`:''}
+        </div>
+      </div>
+      <div class="pdf-section-body">
+        <div class="pdf-drop-mini" onclick="triggerPDFUpload('${sec.id}')">
+          <div style="font-size:1.4rem;margin-bottom:4px">📤</div>
+          <div class="pdf-drop-mini-text">Tap to upload PDF to <strong>${sec.name}</strong></div>
+          <input type="file" id="pdf-input-${sec.id}" accept=".pdf" style="display:none" onchange="uploadPDF(event,'${sec.id}')"/>
+        </div>
+        ${secPdfs.length?`<div class="pdf-list">${secPdfs.map(p=>`<div class="pdf-item"><div style="font-size:1.3rem">📄</div><div class="pdf-info"><div class="pdf-name">${p.name}</div><div class="pdf-size">${fmtBytes(p.size)} · ${new Date(p.created_at).toLocaleDateString()}</div></div><div style="display:flex;gap:5px;flex-shrink:0"><button class="btn btn-secondary btn-sm" onclick="dlPDF(${p.id})">⬇</button><button class="btn btn-danger btn-sm" onclick="delPDF(${p.id})">✕</button></div></div>`).join('')}</div>`:'<div style="font-size:.76rem;color:var(--muted);text-align:center;padding:8px">No files yet</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+function triggerPDFUpload(secId){document.getElementById('pdf-input-'+secId)?.click();}
+function deletePDFSection(id){
+  if(!confirm('Delete this section? PDFs inside will also be removed.'))return;
+  pdfSections=pdfSections.filter(s=>s.id!==id);
+  pdfsData.filter(p=>p.section_id===id).forEach(p=>dbDelete('pdfs','?id=eq.'+p.id));
+  savePDFSections();loadPDFs();toast('Section deleted');
+}
+function uploadPDF(e,secId){const f=e.target.files[0];if(f)processPDF(f,secId);e.target.value='';}
+function processPDF(file,secId='general'){
+  const r=new FileReader();
+  r.onload=async ev=>{
+    try{await dbPost('pdfs',{name:file.name,size:file.size,data:ev.target.result,section_id:secId});toast('PDF uploaded! 📄');loadPDFs();}
+    catch(e){toast('Upload failed — file may be too large','error');}
+  };r.readAsDataURL(file);
+}
+function fmtBytes(b){if(!b)return'';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
+function dlPDF(id){const p=pdfsData.find(x=>x.id===id);if(!p)return;const a=document.createElement('a');a.href=p.data;a.download=p.name;a.click();}
+async function delPDF(id){try{await dbDelete('pdfs','?id=eq.'+id);toast('Deleted');loadPDFs();}catch(e){toast('Failed','error');}}
+
+// ══ FLASHCARDS ══
+function populateFCSelect(){const sel=document.getElementById('fc-quiz-select');sel.innerHTML='<option value="">— Select —</option>'+quizzes.map(q=>`<option value="${q.id}">${q.title} (${q.questions.length}Qs)</option>`).join('');}
+function loadFCById(id){go('flashcards');document.getElementById('fc-quiz-select').value=id;loadFC();}
+function loadFC(){
+  const id=parseInt(document.getElementById('fc-quiz-select').value);const q=quizzes.find(x=>x.id===id);
+  if(!q){document.getElementById('fc-content').style.display='none';document.getElementById('fc-empty').style.display='block';return;}
+  fcCards=q.questions.map(qu=>({q:qu.text,a:qu.options[qu.correct]}));fcIdx=0;
+  document.getElementById('fc-content').style.display='block';document.getElementById('fc-empty').style.display='none';updateFC();
+}
+function updateFC(){if(!fcCards.length)return;document.getElementById('fc-inner').classList.remove('flipped');document.getElementById('fc-front').textContent=fcCards[fcIdx].q;document.getElementById('fc-back').textContent=fcCards[fcIdx].a;document.getElementById('fc-counter').textContent=(fcIdx+1)+'/'+fcCards.length;document.getElementById('fc-prog').style.width=((fcIdx+1)/fcCards.length*100)+'%';}
+function flipCard(){document.getElementById('fc-inner').classList.toggle('flipped');}
+function nextFC(){fcIdx=fcIdx<fcCards.length-1?fcIdx+1:0;updateFC();}
+function prevFC(){fcIdx=fcIdx>0?fcIdx-1:fcCards.length-1;updateFC();}
+function shuffleFC(){fcCards.sort(()=>Math.random()-.5);fcIdx=0;updateFC();toast('Shuffled! 🔀');}
+function resetFC(){fcIdx=0;updateFC();}
+
+// ══ POMODORO ══
+function togglePom(){if(pomRunning){clearInterval(pomInterval);pomRunning=false;document.getElementById('pom-btn').textContent='▶ Resume';}else{pomRunning=true;document.getElementById('pom-btn').textContent='⏸ Pause';pomInterval=setInterval(tickPom,1000);}}
+function tickPom(){pomTime--;updatePomDisp();if(pomTime<=0){clearInterval(pomInterval);pomRunning=false;if(!pomIsBreak){pomSessions++;pomIsBreak=true;pomTime=5*60;pomTotal=5*60;toast('Break time! 🌿','info');}else{pomIsBreak=false;pomTime=25*60;pomTotal=25*60;toast('Back to it! 💪');}document.getElementById('pom-btn').textContent='▶ Start';updatePomDisp();updatePomDots();}}
+function resetPom(){clearInterval(pomInterval);pomRunning=false;pomIsBreak=false;pomTime=25*60;pomTotal=25*60;document.getElementById('pom-btn').textContent='▶ Start';updatePomDisp();}
+function updatePomDisp(){const m=Math.floor(pomTime/60),s=pomTime%60;document.getElementById('pom-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('pom-label').textContent=pomIsBreak?'Break Time 🌿':'Study Session';document.getElementById('pom-mode').textContent=pomIsBreak?'Break':'Focus Time';document.getElementById('pom-mode').className='pom-mode '+(pomIsBreak?'break':'study');document.getElementById('pom-ring').className='pom-ring'+(pomIsBreak?' break':'');document.getElementById('pom-sess').textContent=pomSessions;document.getElementById('pom-circle').style.strokeDashoffset=453*(1-pomTime/pomTotal);}
+function updatePomDots(){document.getElementById('pom-dots').innerHTML=Array.from({length:4},(_,i)=>`<div class="pom-dot ${i<pomSessions?'done':''}"></div>`).join('');}
+
+// ══ ADMIN PANEL ══
+let adminUnlocked=false;
+
+function openAdminPanel(){
+  if(!adminUnlocked){
+    const pin=prompt('Enter Admin PIN:');
+    if(pin===null)return;
+    if(pin!==ADMIN_PIN){toast('Wrong PIN','error');return;}
+    adminUnlocked=true;
+    toast('Admin access granted ✓');
+  }
+  renderAdminPanel();
+  document.getElementById('admin-modal').classList.add('open');
+}
+
+function closeAdminModal(){
+  document.getElementById('admin-modal').classList.remove('open');
+}
+
+function renderAdminPanel(){
+  const body=document.getElementById('admin-modal-body');
+  body.innerHTML=`
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:18px;line-height:1.6">Edit any member's balance directly or delete specific entries. Changes sync live for everyone.</p>
+    <div style="display:flex;flex-direction:column;gap:12px" id="admin-members-list">
+      ${MEMBERS.map((m,i)=>{
+        const d=feesData[m.name]||{balance:0,logs:[]};
+        const bal=Number(d.balance)||0;
+        const[c1,c2]=COLORS[i];
+        return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,${c1},${c2});display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:900;flex-shrink:0">${m.name[0]}</div>
+            <div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase">${m.name}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:${bal>0?'var(--blood-g)':'var(--success)'}">Current: ₦${bal.toFixed(2)}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;margin-bottom:10px">
+            <input id="admin-bal-${i}" type="number" step="0.01" placeholder="New balance (₦)" value="${bal.toFixed(2)}" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none"/>
+            <button class="btn btn-primary btn-sm" onclick="adminSetBalance('${m.name}',${i})">Set Balance</button>
+            <button class="btn btn-danger btn-sm" onclick="adminClearAll('${m.name}')">Clear All</button>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">History — tap ✕ to delete entry</div>
+          <div style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto">
+            ${(d.logs||[]).length?(d.logs||[]).map(l=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.74rem">
+                <span style="color:var(--muted)">${l.type==='pay'?'paid':'fined'}</span>
+                <span style="font-family:'DM Mono',monospace;font-weight:700;color:${l.type==='pay'?'var(--success)':'var(--blood-g)'}">${l.type==='pay'?'-':'+'}₦${Number(l.amount).toFixed(2)}</span>
+                <span style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted)">${new Date(l.created_at).toLocaleDateString()}</span>
+                <button onclick="adminDeleteLog(${l.id},'${m.name}',${l.amount},'${l.type}')" style="background:none;border:none;color:var(--blood-g);cursor:pointer;font-size:.78rem;padding:1px 5px;border-radius:4px">✕</button>
+              </div>`).join(''):'<div style="font-size:.72rem;color:var(--muted);padding:3px">No entries</div>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:16px" onclick="adminLock()">🔒 Lock Admin & Close</button>
+  `;
+}
+
+async function adminSetBalance(name,i){
+  const val=parseFloat(document.getElementById('admin-bal-'+i).value);
+  if(isNaN(val)){toast('Enter a valid amount','error');return;}
+  try{
+    const ex=feesData[name];
+    if(ex) await dbPatch('fees',{balance:val,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:val});
+    toast(name+"'s balance set to ₦"+val.toFixed(2));
+    await loadFees();
+    renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminClearAll(name){
+  if(!confirm('Clear ALL history and set balance to ₦0.00 for '+name+'?'))return;
+  try{
+    const ex=feesData[name];
+    if(ex) await dbPatch('fees',{balance:0,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:0});
+    // Delete all logs for this member
+    await dbDelete('fee_logs','?member_name=eq.'+name);
+    toast(name+"'s fees fully cleared ✓");
+    await loadFees();
+    renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminDeleteLog(logId,memberName,amount,type){
+  try{
+    const ex=feesData[memberName];
+    if(ex){
+      let newBal=Number(ex.balance);
+      if(type==='fine') newBal=Math.max(0,newBal-amount);
+      else newBal=newBal+amount;
+      await dbPatch('fees',{balance:newBal,updated_at:new Date().toISOString()},'?member_name=eq.'+memberName);
+    }
+    await dbDelete('fee_logs','?id=eq.'+logId);
+    toast('Entry deleted ✓');
+    await loadFees();
+    renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+function adminLock(){
+  adminUnlocked=false;
+  closeAdminModal();
+  toast('Admin locked 🔒');
+}
+
+// ══ ADMIN DELETE (Elisha only) ══
+const ADMIN_PIN='1206'; // Change this to your secret PIN
+async function adminDelete(logId, memberName, amount, type){
+  const pin=prompt('Enter admin PIN to delete this entry:');
+  if(pin===null)return;
+  if(pin!==ADMIN_PIN){toast('Wrong PIN — only Elisha can delete entries','error');return;}
+  if(!confirm('Delete this '+type+' entry of '+CUR+Number(amount).toFixed(2)+' for '+memberName+'?'))return;
+  try{
+    // Reverse the balance effect
+    const ex=feesData[memberName];
+    if(ex){
+      let newBal=Number(ex.balance);
+      if(type==='fine') newBal=Math.max(0,newBal-amount);
+      else newBal=newBal+amount;
+      await dbPatch('fees',{balance:newBal,updated_at:new Date().toISOString()},'?member_name=eq.'+memberName);
+    }
+    await dbDelete('fee_logs','?id=eq.'+logId);
+    toast('Entry deleted ✓');
+    await loadFees();
+  }catch(e){toast('Failed to delete','error');}
+}
+
+
+// ══ ADMIN PANEL ══
+let adminUnlocked=false;
+function openAdmin(){
+  if(!adminUnlocked){
+    const pin=prompt('Enter Admin PIN:');
+    if(pin===null)return;
+    if(pin!==ADMIN_PIN){toast('Wrong PIN','error');return;}
+    adminUnlocked=true;
+    toast('Admin access granted 🔐');
+  }
+  renderAdminPanel();
+  document.getElementById('admin-modal').classList.add('open');
+}
+function closeAdmin(){document.getElementById('admin-modal').classList.remove('open');}
+
+function renderAdminPanel(){
+  // Fee management
+  const feeList=document.getElementById('admin-fee-list');
+  feeList.innerHTML=MEMBERS.map((m,i)=>{
+    const d=feesData[m.name]||{balance:0,logs:[]};
+    const bal=Number(d.balance)||0;
+    const[c1,c2]=COLORS[i];
+    return`<div class="admin-member-row">
+      <div class="admin-member-name" style="display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,${c1},${c2});display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.85rem">${m.name[0]}</div>
+        ${m.name}
+        <div class="admin-bal ${bal>0?'owed':'clear'}">₦${Math.abs(bal).toFixed(2)}</div>
+      </div>
+      <div class="admin-controls">
+        <input class="admin-input" id="admin-fi-${i}" type="number" min="0" step="0.01" placeholder="New balance"/>
+        <button class="btn btn-danger btn-sm" onclick="adminSetBalance('${m.name}',${i})">Set Balance</button>
+        <button class="btn btn-success btn-sm" onclick="adminClearBalance('${m.name}')">Clear All</button>
+        <button class="btn btn-secondary btn-sm" onclick="adminDeleteAllLogs('${m.name}')">Clear History</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Quiz list for deletion
+  const quizList=document.getElementById('admin-quiz-list');
+  if(!quizzes.length){quizList.innerHTML='<div style="font-size:.78rem;color:var(--muted)">No quizzes</div>';}
+  else{quizList.innerHTML=quizzes.map(q=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.88rem;letter-spacing:.03em">${q.title} <span style="color:var(--muted);font-size:.72rem">(${q.questions.length}Qs)</span></div>
+    <button class="btn btn-danger btn-sm" onclick="adminDeleteQuiz(${q.id},'${q.title.replace(/'/g,"\'")}')">Delete</button>
+  </div>`).join('');}
+
+  // Score clearing
+  const scoreList=document.getElementById('admin-score-list');
+  if(!quizzes.length){scoreList.innerHTML='<div style="font-size:.78rem;color:var(--muted)">No quizzes</div>';}
+  else{scoreList.innerHTML=quizzes.map(q=>{
+    const count=scores.filter(s=>s.quiz_id===q.id).length;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.88rem">${q.title} <span style="color:var(--muted);font-size:.72rem">(${count} scores)</span></div>
+      <button class="btn btn-danger btn-sm" onclick="adminClearScores(${q.id},'${q.title.replace(/'/g,"\'")}')">Clear</button>
+    </div>`;
+  }).join('');}
+}
+
+async function adminSetBalance(name,i){
+  const val=parseFloat(document.getElementById('admin-fi-'+i).value);
+  if(isNaN(val)){toast('Enter a valid amount','error');return;}
+  if(!confirm('Set '+name+''s balance to ₦'+val.toFixed(2)+'?'))return;
+  try{
+    const ex=feesData[name];
+    if(ex)await dbPatch('fees',{balance:val,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:val});
+    await dbPost('fee_logs',{member_name:name,type:'fine',amount:val,created_at:new Date().toISOString()});
+    toast(name+''s balance set to ₦'+val.toFixed(2));
+    document.getElementById('admin-fi-'+i).value='';
+    await loadFees();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminClearBalance(name){
+  if(!confirm('Clear ALL balance for '+name+'? This sets it to ₦0.'))return;
+  try{
+    const ex=feesData[name];
+    if(ex)await dbPatch('fees',{balance:0,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
+    else await dbPost('fees',{member_name:name,balance:0});
+    toast(name+''s balance cleared ✓');
+    await loadFees();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminDeleteAllLogs(name){
+  if(!confirm('Delete ALL fee history for '+name+'? Cannot be undone.'))return;
+  try{
+    await dbDelete('fee_logs','?member_name=eq.'+name);
+    toast(name+''s fee history cleared ✓');
+    await loadFees();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminDeleteQuiz(id,title){
+  if(!confirm('Delete quiz "'+title+'"? This also deletes all scores for it.'))return;
+  try{
+    await dbDelete('quizzes','?id=eq.'+id);
+    await dbDelete('scores','?quiz_id=eq.'+id);
+    toast('Quiz deleted ✓');
+    await loadQuizzes();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
+}
+
+async function adminClearScores(quizId,title){
+  if(!confirm('Clear ALL scores for "'+title+'"?'))return;
+  try{
+    await dbDelete('scores','?quiz_id=eq.'+quizId);
+    toast('Scores cleared ✓');
+    await loadLeaderboard();renderAdminPanel();
+  }catch(e){toast('Failed','error');}
 }
 
 // ══ INIT ══
