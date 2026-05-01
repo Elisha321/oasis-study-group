@@ -541,32 +541,47 @@ main{flex:1;padding:24px 16px;max-width:1280px;margin:0 auto;width:100%}
 <!-- CREATE -->
 <div class="page" id="page-create">
   <div class="sec-header"><div class="sec-title">✏️ Create Quiz</div><button class="btn btn-secondary btn-sm" onclick="go('quizzes')">← Back</button></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+  <div class="form-row" style="margin-bottom:14px">
     <div class="form-group" style="margin:0"><label class="form-label">Quiz Title</label><input class="form-input" id="quiz-title" placeholder="e.g. Anatomy MCQs"/></div>
     <div class="form-group" style="margin:0"><label class="form-label">Description</label><input class="form-input" id="quiz-desc" placeholder="Optional"/></div>
     <div class="form-group" style="margin:0"><label class="form-label">Time Limit (mins)</label><input class="form-input" id="quiz-time" type="number" min="1" max="180" value="10"/></div>
     <div class="form-group" style="margin:0"><label class="form-label">Passing Score (%)</label><input class="form-input" id="quiz-pass" type="number" min="0" max="100" value="70"/></div>
   </div>
-  <div class="bulk-box">
-    <div class="bulk-title">📋 Paste All Questions Here</div>
-    <p style="font-size:.76rem;color:var(--muted);line-height:1.6;margin-bottom:11px">Paste any number of questions at once. Use <strong style="color:var(--success)">Answer: 2</strong> (number) at the end of each question.</p>
-    <div class="bulk-fmt"><span class="hl">1.</span> What is the powerhouse of the cell?
-<span class="hl">1)</span> Brain
-<span class="hl">2)</span> Mitochondria
-<span class="hl">3)</span> Nucleus
-<span class="hl">4)</span> Heart
-<span class="hl2">Answer: 2</span>
+  <div class="bulk-importer">
+    <div class="bulk-importer-title">📋 Step 1 — Paste Your Questions</div>
+    <p style="font-size:.76rem;color:var(--muted);line-height:1.6;margin-bottom:11px">Paste all your questions with <strong style="color:var(--accent)">A. B. C. D.</strong> options. No need to add answers here.</p>
+    <div class="bulk-format-box"><span class="hl">1.</span> Patient with reduced salivary secretion will have impaired digestion of:
+<span class="hl">A.</span> Lactose
+<span class="hl">B.</span> Cellulose
+<span class="hl">C.</span> Glycogen
+<span class="hl">D.</span> Sucrose
 
-<span class="hl">2.</span> Next question...</div>
-    <textarea class="bulk-ta" id="bulk-input" placeholder="Paste your questions here..."></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-secondary btn-sm" onclick="previewBulk()">👁 Preview</button>
-      <button class="btn btn-primary" onclick="saveQuiz()">🚀 Save Quiz</button>
-      <span id="q-cnt" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted)"></span>
-    </div>
-    <div id="bulk-prev" class="bulk-prev"></div>
-    <div id="bulk-err" style="display:none" class="parse-err"></div>
+<span class="hl">2.</span> Which enzyme is found in saliva?
+<span class="hl">A.</span> Pepsin
+<span class="hl">B.</span> Amylase
+<span class="hl">C.</span> Lipase
+<span class="hl">D.</span> Trypsin</div>
+    <textarea class="bulk-textarea" id="bulk-input" placeholder="Paste all your questions here with A. B. C. D. options..." style="min-height:200px"></textarea>
   </div>
+  <div class="bulk-importer" style="margin-top:14px">
+    <div class="bulk-importer-title">✅ Step 2 — Paste Your Answers</div>
+    <p style="font-size:.76rem;color:var(--muted);line-height:1.6;margin-bottom:11px">Paste all answers in order — one per line. Format: <strong style="color:var(--success)">1. A</strong> or just <strong style="color:var(--success)">A</strong> per line.</p>
+    <div class="bulk-format-box"><span class="hl2">1. D
+2. B
+3. A
+4. C</span>   <span style="color:var(--muted)">← or just the letters:</span>   <span class="hl2">D
+B
+A
+C</span></div>
+    <textarea class="bulk-textarea" id="answers-input" placeholder="Paste your answers here...&#10;1. A&#10;2. D&#10;3. B&#10;..." style="min-height:130px"></textarea>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+    <button class="btn btn-secondary" onclick="previewBulk()">👁 Preview</button>
+    <button class="btn btn-primary btn-lg" onclick="saveQuiz()">🚀 Save Quiz</button>
+    <span id="q-count-lbl" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted)"></span>
+  </div>
+  <div id="bulk-preview" class="bulk-preview" style="margin-top:12px"></div>
+  <div id="bulk-error" style="display:none;margin-top:10px" class="parse-error"></div>
 </div>
 
 </main>
@@ -760,34 +775,66 @@ function parseBulk(text){
   });
   return{questions,errors};
 }
+function parseQuestions(text){
+  const questions=[];
+  const clean=text.replace(/\*\*/g,'').replace(/^-{2,}$/gm,'');
+  const lines=clean.split('\n').map(l=>l.trim()).filter(l=>l);
+  let cur=null;
+  for(const l of lines){
+    const optM=l.match(/^([A-Da-d])[.)\s]+(.+)/);
+    if(optM&&cur){cur.opts.push(optM[2].trim());continue;}
+    const qM=l.match(/^(\d+)[.)\s]+(.+)/);
+    if(qM){if(cur)questions.push(cur);cur={num:parseInt(qM[1]),text:qM[2].trim(),opts:[]};continue;}
+    if(cur&&cur.opts.length===0&&l)cur.text+=' '+l;
+  }
+  if(cur)questions.push(cur);
+  return questions;
+}
+function parseAnswers(text){
+  const answers=[];
+  for(const l of text.split('\n').map(l=>l.trim()).filter(l=>l)){
+    const m=l.match(/^(?:\d+[.)\s]+)?([A-Da-d])/i);
+    if(m)answers.push(['A','B','C','D'].indexOf(m[1].toUpperCase()));
+  }
+  return answers;
+}
 function previewBulk(){
-  const{questions,errors}=parseBulk(document.getElementById('bulk-input').value);
-  const errEl=document.getElementById('bulk-err'),prevEl=document.getElementById('bulk-prev');
-  document.getElementById('q-cnt').textContent=questions.length?'✓ '+questions.length+' questions':'';
-  if(errors.length){errEl.style.display='block';errEl.innerHTML='⚠ Errors:<br>'+errors.map(e=>'• '+e).join('<br>');}else{errEl.style.display='none';}
-  if(questions.length){
-    prevEl.style.display='block';
-    prevEl.innerHTML='<div style="font-family:\'DM Mono\',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Preview ('+questions.length+' questions)</div>'+
-      questions.slice(0,3).map((q,i)=>`<div class="prev-q"><div class="prev-qt">${i+1}. ${q.text}</div><div class="prev-opts">${q.options.map((o,oi)=>`<div class="prev-opt ${oi===q.correct?'correct':''}">${oi===q.correct?'✓ ':''}${['A','B','C','D'][oi]}. ${o}</div>`).join('')}</div></div>`).join('')+
-      (questions.length>3?`<div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);padding:6px">...and ${questions.length-3} more</div>`:'');
-  }else{prevEl.style.display='none';}
+  const qText=document.getElementById('bulk-input').value;
+  const aText=document.getElementById('answers-input').value;
+  const errEl=document.getElementById('bulk-error'),prevEl=document.getElementById('bulk-preview');
+  errEl.style.display='none';prevEl.style.display='none';document.getElementById('q-count-lbl').textContent='';
+  if(!qText.trim()){toast('Paste your questions first','error');return;}
+  const rawQs=parseQuestions(qText);
+  if(!rawQs.length){errEl.style.display='block';errEl.innerHTML='No questions found. Make sure each question starts with a number like 1.';return;}
+  const errors=rawQs.filter(q=>q.opts.length<2).map(q=>'Q'+q.num+': only '+q.opts.length+' options found');
+  if(errors.length){errEl.style.display='block';errEl.innerHTML='Errors:<br>'+errors.join('<br>');return;}
+  const answers=aText.trim()?parseAnswers(aText):[];
+  if(answers.length&&answers.length!==rawQs.length){errEl.style.display='block';errEl.innerHTML=rawQs.length+' questions but '+answers.length+' answers — must match!';return;}
+  document.getElementById('q-count-lbl').textContent='✓ '+rawQs.length+' questions'+(answers.length?' · '+answers.length+' answers':'');
+  prevEl.style.display='block';
+  prevEl.innerHTML='<div style="font-family:\'DM Mono\',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Preview — '+rawQs.length+' questions</div>'+
+    rawQs.slice(0,4).map((q,i)=>'<div class="preview-q"><div class="preview-q-text">'+q.num+'. '+q.text+'</div><div class="preview-q-opts">'+q.opts.map((o,oi)=>{const isc=answers.length>i&&answers[i]===oi;return'<div class="preview-opt '+(isc?'correct':'')+'">'+( isc?'✓ ':'')+'ABCD'[oi]+'. '+o+'</div>';}).join('')+'</div></div>').join('')+
+    (rawQs.length>4?'<div style="font-family:\'DM Mono\',monospace;font-size:.68rem;color:var(--muted);padding:5px">...and '+(rawQs.length-4)+' more</div>':'');
 }
 async function saveQuiz(){
-  const title=document.getElementById('quiz-title').value.trim();
-  const desc=document.getElementById('quiz-desc').value.trim();
-  const time=parseInt(document.getElementById('quiz-time').value)||10;
-  const pass=parseInt(document.getElementById('quiz-pass').value)||70;
-  const{questions,errors}=parseBulk(document.getElementById('bulk-input').value);
-  if(!title){toast('Enter a quiz title','error');return;}
-  if(!questions.length){toast('No valid questions found','error');previewBulk();return;}
+  const title=document.getElementById('quiz-title').value.trim();if(!title){toast('Enter a quiz title','error');return;}
+  const qText=document.getElementById('bulk-input').value;if(!qText.trim()){toast('Paste your questions in Step 1','error');return;}
+  const aText=document.getElementById('answers-input').value;if(!aText.trim()){toast('Paste your answers in Step 2','error');return;}
+  const rawQs=parseQuestions(qText);if(!rawQs.length){toast('No questions found','error');return;}
+  const answers=parseAnswers(aText);if(!answers.length){toast('No answers found','error');return;}
+  if(answers.length!==rawQs.length){toast(rawQs.length+' questions but '+answers.length+' answers — must match!','error');return;}
+  const bad=rawQs.filter(q=>q.opts.length<2);if(bad.length){toast(bad.length+' questions have less than 2 options','error');previewBulk();return;}
+  const questions=rawQs.map((q,i)=>({text:q.text,options:q.opts,correct:answers[i]}));
   try{
-    await dbPost('quizzes',{title,description:desc,time_limit:time,pass_score:pass,questions});
+    await dbP('quizzes',{title,description:document.getElementById('quiz-desc').value.trim(),time_limit:parseInt(document.getElementById('quiz-time').value)||10,pass_score:parseInt(document.getElementById('quiz-pass').value)||70,questions});
     toast('Quiz saved with '+questions.length+' questions! 🎉');
-    document.getElementById('quiz-title').value='';document.getElementById('quiz-desc').value='';
-    document.getElementById('bulk-input').value='';document.getElementById('bulk-prev').style.display='none';
-    document.getElementById('q-cnt').textContent='';go('quizzes');
+    ['quiz-title','quiz-desc','bulk-input','answers-input'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('bulk-preview').style.display='none';document.getElementById('q-count-lbl').textContent='';
+    go('quizzes');
   }catch(e){toast('Failed to save','error');}
 }
+
+
 
 // QUIZZES
 async function loadQuizzes(){
