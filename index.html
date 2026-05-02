@@ -916,20 +916,31 @@ function updateTimer(){const el=document.getElementById('timer-el');if(!el)retur
 function renderQuizQs(){
   const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
   let html='';
-  html+='<div class="quiz-header-bar"><div class="quiz-title-bar">'+activeQuiz.title+'</div><div id="timer-el" class="timer-display">--:--</div></div>';
-  html+='<div class="progress-bar-wrap"><div class="progress-bar-fill" id="pbar" style="width:'+pct+'%"></div></div>';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 16px;margin-bottom:18px;">';
+  html+='<div style="font-family:sans-serif;font-size:.88rem;font-weight:800;text-transform:uppercase;color:var(--text)">'+activeQuiz.title+'</div>';
+  html+='<div id="timer-el" style="font-family:monospace;font-size:1.4rem;font-weight:700;color:#a855f7;letter-spacing:.1em;">--:--</div>';
+  html+='</div>';
+  html+='<div style="height:3px;background:#2c1d47;border-radius:4px;margin-bottom:20px;overflow:hidden;"><div id="pbar" style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#e74c3c);border-radius:4px;transition:width .3s;"></div></div>';
+  
   activeQuiz.questions.forEach(function(q,qi){
-    html+='<div class="question-block">';
-    html+='<div class="question-num">Question '+(qi+1)+' of '+activeQuiz.questions.length+'</div>';
-    html+='<div class="question-text">'+q.text+'</div>';
-    html+='<div class="options-choices">';
+    html+='<div style="background:#1a1126;border:1px solid #2e1f4a;border-radius:12px;padding:20px;margin-bottom:14px;">';
+    html+='<div style="font-family:monospace;font-size:.64rem;color:#a855f7;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;">Question '+(qi+1)+' of '+activeQuiz.questions.length+'</div>';
+    html+='<div style="font-size:.95rem;font-weight:600;line-height:1.55;margin-bottom:14px;color:#f0eaf8;">'+q.text+'</div>';
+    html+='<div style="display:flex;flex-direction:column;gap:8px;">';
     q.options.forEach(function(o,oi){
-      var sel=userAnswers[qi]===oi?' selected':'';
-      html+='<button class="choice-btn'+sel+'" onclick="pickAns('+qi+','+oi+')"><span class="choice-letter">'+['A','B','C','D'][oi]+'</span>'+o+'</button>';
+      var isSelected = userAnswers[qi]===oi;
+      var bg = isSelected ? 'rgba(124,58,237,.18)' : '#211535';
+      var border = isSelected ? '#7c3aed' : '#2e1f4a';
+      html+='<button onclick="pickAns('+qi+','+oi+')" style="background:'+bg+';border:1px solid '+border+';border-radius:9px;padding:11px 15px;text-align:left;cursor:pointer;font-size:.85rem;color:#f0eaf8;display:flex;align-items:center;gap:10px;width:100%;">';
+      html+='<span style="font-family:monospace;font-size:.7rem;width:24px;height:24px;border-radius:6px;background:#2c1d47;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">'+['A','B','C','D'][oi]+'</span>';
+      html+=o;
+      html+='</button>';
     });
     html+='</div></div>';
   });
-  html+='<button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:8px" onclick="submitQuiz(false)">Submit Quiz ✓</button>';
+  
+  html+='<button onclick="submitQuiz(false)" style="width:100%;background:linear-gradient(135deg,#7c3aed,#8b1a1a);color:#fff;border:none;padding:13px;border-radius:9px;font-size:.95rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;margin-top:8px;">Submit Quiz ✓</button>';
+  
   document.getElementById('quiz-modal-body').innerHTML=html;
   updateTimer();
 }
