@@ -916,31 +916,29 @@ function updateTimer(){const el=document.getElementById('timer-el');if(!el)retur
 function renderQuizQs(){
   const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
   let html='';
-  html+='<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 16px;margin-bottom:18px;">';
-  html+='<div style="font-family:sans-serif;font-size:.88rem;font-weight:800;text-transform:uppercase;color:var(--text)">'+activeQuiz.title+'</div>';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;background:#211535;border:1px solid #2e1f4a;border-radius:11px;padding:12px 16px;margin-bottom:18px;">';
+  html+='<div style="font-size:.88rem;font-weight:800;text-transform:uppercase;color:#f0eaf8;">'+activeQuiz.title+'</div>';
   html+='<div id="timer-el" style="font-family:monospace;font-size:1.4rem;font-weight:700;color:#a855f7;letter-spacing:.1em;">--:--</div>';
   html+='</div>';
   html+='<div style="height:3px;background:#2c1d47;border-radius:4px;margin-bottom:20px;overflow:hidden;"><div id="pbar" style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#e74c3c);border-radius:4px;transition:width .3s;"></div></div>';
-  
+
   activeQuiz.questions.forEach(function(q,qi){
-    html+='<div style="background:#1a1126;border:1px solid #2e1f4a;border-radius:12px;padding:20px;margin-bottom:14px;">';
+    html+='<div data-qi="'+qi+'" style="background:#1a1126;border:1px solid #2e1f4a;border-radius:12px;padding:20px;margin-bottom:14px;">';
     html+='<div style="font-family:monospace;font-size:.64rem;color:#a855f7;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;">Question '+(qi+1)+' of '+activeQuiz.questions.length+'</div>';
     html+='<div style="font-size:.95rem;font-weight:600;line-height:1.55;margin-bottom:14px;color:#f0eaf8;">'+q.text+'</div>';
     html+='<div style="display:flex;flex-direction:column;gap:8px;">';
     q.options.forEach(function(o,oi){
-      var isSelected = userAnswers[qi]===oi;
-      var bg = isSelected ? 'rgba(124,58,237,.18)' : '#211535';
-      var border = isSelected ? '#7c3aed' : '#2e1f4a';
-      html+='<button onclick="pickAns('+qi+','+oi+')" style="background:'+bg+';border:1px solid '+border+';border-radius:9px;padding:11px 15px;text-align:left;cursor:pointer;font-size:.85rem;color:#f0eaf8;display:flex;align-items:center;gap:10px;width:100%;">';
+      var isSelected=userAnswers[qi]===oi;
+      var bg=isSelected?'rgba(124,58,237,.25)':'#211535';
+      var border=isSelected?'1px solid #7c3aed':'1px solid #2e1f4a';
+      html+='<button data-oi="'+oi+'" onclick="pickAns('+qi+','+oi+')" style="background:'+bg+';border:'+border+';border-radius:9px;padding:11px 15px;text-align:left;cursor:pointer;font-size:.85rem;color:#f0eaf8;display:flex;align-items:center;gap:10px;width:100%;transition:all .2s;">';
       html+='<span style="font-family:monospace;font-size:.7rem;width:24px;height:24px;border-radius:6px;background:#2c1d47;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">'+['A','B','C','D'][oi]+'</span>';
-      html+=o;
-      html+='</button>';
+      html+=o+'</button>';
     });
     html+='</div></div>';
   });
-  
+
   html+='<button onclick="submitQuiz(false)" style="width:100%;background:linear-gradient(135deg,#7c3aed,#8b1a1a);color:#fff;border:none;padding:13px;border-radius:9px;font-size:.95rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;margin-top:8px;">Submit Quiz ✓</button>';
-  
   document.getElementById('quiz-modal-body').innerHTML=html;
   updateTimer();
 }
