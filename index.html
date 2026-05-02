@@ -1123,7 +1123,7 @@ async function addFine(name,i){
     toast('Added '+CUR+val.toFixed(2)+' fine for '+name,'error');document.getElementById('fi-'+i).value='';await loadFees();
   }catch(e){toast('Failed','error');}
 }
-async async function pinPayFee(name,i){
+async function pinPayFee(name,i){
   const pin=prompt('Enter PIN to record payment:');
   if(pin===null)return;
   if(pin!==ADMIN_PIN){toast('Wrong PIN — only admin can record payments','error');return;}
