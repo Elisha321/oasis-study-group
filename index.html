@@ -915,21 +915,22 @@ function startTimer(){clearInterval(timerInt);updateTimer();timerInt=setInterval
 function updateTimer(){const el=document.getElementById('timer-el');if(!el)return;const m=Math.floor(timeLeft/60),s=timeLeft%60;el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');el.className='timer'+(timeLeft<60?' danger':timeLeft<180?' warning':'');}
 function renderQuizQs(){
   const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
-  document.getElementById('quiz-modal-body').innerHTML=`
-    <div style="position:sticky;top:-18px;z-index:50;background:rgba(26,17,38,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--border2);padding:12px 18px;margin:-18px -18px 16px -18px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;">
-      <div style="display:flex;flex-direction:column;gap:2px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:.88rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text)">${activeQuiz.title}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted)">📝 ${curPlayer}</div>
-      </div>
-      <div id="timer-el" class="timer" style="font-size:1.8rem !important;font-weight:700 !important;letter-spacing:.08em;padding:6px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border2)">--:--</div>
-    </div>
-    <div class="pbar-wrap"><div class="pbar-fill" id="pbar" style="width:${pct}%"></div></div>
-    ${activeQuiz.questions.map((q,qi)=>`<div class="qblock">
-      <div class="qnum">Question ${qi+1} of ${activeQuiz.questions.length}</div>
-      <div class="qtext">${q.text}</div>
-      <div class="qopts">${q.options.map((o,oi)=>`<button class="cbtn ${userAnswers[qi]===oi?'selected':''}" onclick="pickAns(${qi},${oi})"><span class="cletter">${['A','B','C','D'][oi]}</span>${o}</button>`).join('')}</div>
-    </div>`).join('')}
-    <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:8px" onclick="submitQuiz(false)">Submit Quiz ✓</button>`;
+  const questionsHTML=activeQuiz.questions.map((q,qi)=>{
+    const optsHTML=q.options.map((o,oi)=>{
+      const sel=userAnswers[qi]===oi?'selected':'';
+      return '<button class="choice-btn '+sel+'" onclick="pickAns('+qi+','+oi+')"><span class="choice-letter">'+['A','B','C','D'][oi]+'</span>'+o+'</button>';
+    }).join('');
+    return '<div class="question-block"><div class="question-num">Question '+(qi+1)+' of '+activeQuiz.questions.length+'</div><div class="question-text">'+q.text+'</div><div class="options-choices">'+optsHTML+'</div></div>';
+  }).join('');
+  document.getElementById('quiz-modal-body').innerHTML=
+    '<div style="position:sticky;top:-18px;z-index:50;background:rgba(26,17,38,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--border2);padding:12px 18px;margin:-18px -18px 16px -18px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;">'
+    +'<div style="display:flex;flex-direction:column;gap:2px"><div style="font-family:'Barlow Condensed',sans-serif;font-size:.88rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text)">'+activeQuiz.title+'</div>'
+    +'<div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted)">📝 '+curPlayer+'</div></div>'
+    +'<div id="timer-el" class="timer-display" style="font-size:1.8rem;font-weight:700;letter-spacing:.08em;padding:6px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border2)">--:--</div>'
+    +'</div>'
+    +'<div class="progress-bar-wrap"><div class="progress-bar-fill" id="pbar" style="width:'+pct+'%"></div></div>'
+    +questionsHTML
+    +'<button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:8px" onclick="submitQuiz(false)">Submit Quiz ✓</button>';
   updateTimer();
 }
 function pickAns(qi,oi){
