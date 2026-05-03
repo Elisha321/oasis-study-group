@@ -947,20 +947,21 @@ function pickAns(qi,oi){
   // Update progress bar
   const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
   const pb=document.getElementById('pbar');if(pb)pb.style.width=pct+'%';
-  // Update all buttons in this question block
-  const allBtns=document.querySelectorAll('[data-qi="'+qi+'"]');
-  allBtns.forEach(function(btn){
-    const btnOi=parseInt(btn.getAttribute('data-oi'));
-    if(btnOi===oi){
-      btn.style.background='rgba(124,58,237,.25)';
-      btn.style.border='1px solid #7c3aed';
-      btn.style.color='#f0eaf8';
-    } else {
-      btn.style.background='#211535';
-      btn.style.border='1px solid #2e1f4a';
-      btn.style.color='#f0eaf8';
-    }
+  // Reset all buttons in this question to default
+  document.querySelectorAll('[data-qi="'+qi+'"]').forEach(function(btn){
+    btn.style.background='#211535';
+    btn.style.border='1px solid #2e1f4a';
+    btn.style.color='#f0eaf8';
+    btn.style.fontWeight='normal';
   });
+  // Highlight ONLY the selected button
+  const selected=document.querySelector('[data-qi="'+qi+'"][data-oi="'+oi+'"]');
+  if(selected){
+    selected.style.background='rgba(124,58,237,.3)';
+    selected.style.border='2px solid #a855f7';
+    selected.style.color='#ffffff';
+    selected.style.fontWeight='600';
+  }
 }
 async function submitQuiz(timeout=false){
   clearInterval(timerInt);
