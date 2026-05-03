@@ -944,9 +944,23 @@ function renderQuizQs(){
 }
 function pickAns(qi,oi){
   userAnswers[qi]=oi;
+  // Update progress bar
   const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
   const pb=document.getElementById('pbar');if(pb)pb.style.width=pct+'%';
-  document.querySelectorAll('.qblock')[qi]?.querySelectorAll('.cbtn').forEach((b,i)=>b.classList.toggle('selected',i===oi));
+  // Update all buttons in this question block
+  const allBtns=document.querySelectorAll('[data-qi="'+qi+'"]');
+  allBtns.forEach(function(btn){
+    const btnOi=parseInt(btn.getAttribute('data-oi'));
+    if(btnOi===oi){
+      btn.style.background='rgba(124,58,237,.25)';
+      btn.style.border='1px solid #7c3aed';
+      btn.style.color='#f0eaf8';
+    } else {
+      btn.style.background='#211535';
+      btn.style.border='1px solid #2e1f4a';
+      btn.style.color='#f0eaf8';
+    }
+  });
 }
 async function submitQuiz(timeout=false){
   clearInterval(timerInt);
