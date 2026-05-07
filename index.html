@@ -378,6 +378,23 @@ main{flex:1;padding:24px 16px;max-width:1280px;margin:0 auto;width:100%}
 .floating-timer.warning .floating-timer-time{color:var(--warn)}
 .floating-timer.danger .floating-timer-time{color:var(--blood-g)}
 .floating-timer-name{font-family:'Barlow Condensed',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* PROFILE */
+.profile-tab{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);transition:all .2s}
+.profile-tab.active{background:linear-gradient(135deg,var(--purple),var(--blood));color:#fff;border-color:transparent}
+.profile-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.profile-stat{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px;text-align:center}
+.profile-stat-num{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;margin-bottom:3px}
+.profile-stat-lbl{font-size:.68rem;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.06em}
+.profile-quiz-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:11px}
+.profile-quiz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;cursor:pointer}
+.profile-quiz-title{font-family:'Barlow Condensed',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.profile-quiz-score{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900}
+.profile-quiz-score.pass{color:var(--success)}.profile-quiz-score.fail{color:var(--blood-g)}
+.profile-failed-q{background:rgba(139,26,26,.1);border:1px solid rgba(192,57,43,.22);border-radius:9px;padding:11px;margin-bottom:7px}
+.profile-failed-q-text{font-size:.82rem;font-weight:600;margin-bottom:6px;color:var(--text);line-height:1.4}
+.profile-correct-ans{font-size:.76rem;color:var(--success);font-family:'DM Mono',monospace}
+.profile-expand{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:8px;cursor:pointer;text-align:center;padding:4px}
 </style>
 </head>
 <body>
@@ -412,6 +429,7 @@ main{flex:1;padding:24px 16px;max-width:1280px;margin:0 auto;width:100%}
   <div class="nav-item" id="ni-leaderboard" onclick="go('leaderboard')"><span class="nav-icon">🏆</span><span class="nav-label">Leaderboard</span></div>
   <div class="nav-item" id="ni-analytics" onclick="go('analytics')"><span class="nav-icon">📊</span><span class="nav-label">Analytics</span></div>
   <div class="nav-sec">Group</div>
+  <div class="nav-item" id="nav-profile" onclick="go('profile')"><span class="nav-item-icon">👤</span><span class="nav-item-label">Profiles</span></div>
   <div class="nav-item" id="ni-notice" onclick="go('notice')"><span class="nav-icon">📌</span><span class="nav-label">Notice Board</span></div>
   <div class="nav-item" id="ni-fees" onclick="go('fees')"><span class="nav-icon">💸</span><span class="nav-label">Fees</span></div>
   <div class="nav-item" id="ni-pdfs" onclick="go('pdfs')"><span class="nav-icon">📁</span><span class="nav-label">Study PDFs</span></div>
@@ -604,6 +622,13 @@ C</span></div>
   <div id="bulk-error" style="display:none;margin-top:10px" class="parse-error"></div>
 </div>
 
+<!-- PROFILE PAGE -->
+<div class="page" id="page-profile">
+  <div class="sec-header"><div class="sec-title">👤 Member Profiles</div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px" id="profile-member-tabs"></div>
+  <div id="profile-content"></div>
+</div>
+
 </main>
 
 
@@ -695,8 +720,8 @@ function setSyncing(on,err=false){
   else{d.className='sync-dot';t.textContent='Live';}
 }
 
-const MEMBERS=[{name:'Elisha',role:'Group Lead'},{name:'Charles',role:'Member'},{name:'Nancy',role:'Member'},{name:'Precious',role:'Member'},{name:'Pearl',role:'Member'},{name:'Annie',role:'Member'},{name:'Paula',role:'Member'},{name:'Faith',role:'Member'}];
-const COLORS=[['#7c3aed','#a855f7'],['#8b1a1a','#c0392b'],['#1d4ed8','#60a5fa'],['#065f46','#34d399'],['#92400e','#fbbf24'],['#701a75','#e879f9'],['#1e3a5f','#7dd3fc'],['#3b0764','#c084fc']];
+const MEMBERS=[{name:'Elisha',role:'Group Lead'},{name:'Charles',role:'Member'},{name:'Nancy',role:'Member'},{name:'Precious',role:'Member'},{name:'Pearl 💗😊',role:'Member'},{name:'Annie',role:'Member'},{name:'Paula',role:'Member'},{name:'Faith',role:'Member'},{name:'Rex',role:'Member'}];
+const COLORS=[['#7c3aed','#a855f7'],['#8b1a1a','#c0392b'],['#1d4ed8','#60a5fa'],['#065f46','#34d399'],['#92400e','#fbbf24'],['#701a75','#e879f9'],['#1e3a5f','#7dd3fc'],['#3b0764','#c084fc'],['#0f4c35','#10b981']];
 const ADMIN_PIN='1206';
 const CUR='₦';
 
@@ -718,7 +743,7 @@ function closeNav(){
   document.getElementById('slide-nav').classList.remove('open');
   document.getElementById('nav-overlay').classList.remove('open');
 }
-const LOADERS={quizzes:loadQuizzes,leaderboard:loadLeaderboard,analytics:loadAnalytics,notice:loadNotices,fees:loadFees,pdfs:loadPDFs};
+const LOADERS={quizzes:loadQuizzes,leaderboard:loadLeaderboard,analytics:loadAnalytics,notice:loadNotices,fees:loadFees,pdfs:loadPDFs,profile:loadProfile};
 function go(p){
   closeNav();
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
@@ -752,11 +777,13 @@ function renderMembers(){
     const[c1,c2]=COLORS[i];
     const ms=scores.filter(s=>s.player_name===m.name);
     const best=ms.length?Math.max(...ms.map(s=>s.score)):null;
-    return`<div class="member-card">
-      <div class="m-avatar" style="background:linear-gradient(135deg,${c1},${c2})">${m.name[0]}<span class="m-num">${i+1}</span></div>
-      <div class="m-name">${m.name}</div><div class="m-role">${m.role}</div>
-      ${best!==null?`<div class="m-score">Best: ${best}%</div>`:''}
-    </div>`;
+    return '<div class="member-card" onclick="openMemberProfile(\'' + m.name.replace(/'/g,"\\'") + '\')" style="cursor:pointer">'
+      +'<div class="member-avatar" style="background:linear-gradient(135deg,'+c1+','+c2+')">'+m.name[0]+'<span class="member-num">'+(i+1)+'</span></div>'
+      +'<div class="member-name">'+m.name+'</div>'
+      +'<div class="member-role">'+m.role+'</div>'
+      +(best!==null?'<div class="member-score">Best: '+best+'%</div>':'')
+      +'<div style="font-size:.58rem;color:var(--muted);margin-top:4px;font-family:monospace;letter-spacing:.05em;">👤 View Profile</div>'
+      +'</div>';
   }).join('');
 }
 function populateSelects(){
@@ -1323,6 +1350,98 @@ async function adminClearScores(quizId,title){
   if(!confirm('Clear ALL scores for "'+title+'"?'))return;
   try{await dbDelete('scores','?quiz_id=eq.'+quizId);toast('Scores cleared ✓');await loadLeaderboard();renderAdmin();}
   catch(e){toast('Failed','error');}
+}
+
+// PROFILE
+let activeProfileMember=MEMBERS[0].name;
+async function loadProfile(){
+  try{if(!scores.length)scores=await dbG('scores','?order=created_at.desc');if(!quizzes.length)quizzes=await dbG('quizzes','?order=created_at.desc');}catch(e){}
+  const tabsEl=document.getElementById('profile-member-tabs');
+  tabsEl.innerHTML=MEMBERS.map(m=>`<button class="profile-tab ${m.name===activeProfileMember?'active':''}" onclick="selectProfileMember('${m.name.replace(/'/g,"\\\\'")}'">${m.name}</button>`).join('');
+  renderProfileContent();
+}
+function selectProfileMember(name){
+  activeProfileMember=name;
+  document.querySelectorAll('.profile-tab').forEach(t=>{t.className='profile-tab'+(t.textContent.trim()===name?' active':'');});
+  renderProfileContent();
+}
+function toggleProfileSection(el){
+  const next=el.nextElementSibling;
+  if(next)next.style.display=next.style.display==='none'?'block':'none';
+}
+function renderProfileContent(){
+  const el=document.getElementById('profile-content');
+  const mi=MEMBERS.findIndex(m=>m.name===activeProfileMember);
+  const[c1,c2]=COLORS[mi>=0?mi:0];
+  const memberScores=scores.filter(s=>s.player_name===activeProfileMember);
+  if(!memberScores.length){
+    el.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;text-align:center"><div style="font-size:2rem;margin-bottom:10px">📭</div><div style="font-weight:800;text-transform:uppercase;margin-bottom:6px">'+activeProfileMember+' has no quiz history yet</div><div style="font-size:.78rem;color:var(--muted)">Take a quiz to see your profile!</div></div>';
+    return;
+  }
+  const avg=Math.round(memberScores.reduce((a,s)=>a+s.score,0)/memberScores.length);
+  const best=Math.max(...memberScores.map(s=>s.score));
+  const passCount=memberScores.filter(s=>s.passed).length;
+  const byQuiz={};
+  memberScores.forEach(s=>{if(!byQuiz[s.quiz_id])byQuiz[s.quiz_id]={title:s.quiz_title,quizId:s.quiz_id,attempts:[]};byQuiz[s.quiz_id].attempts.push(s);});
+  let html='';
+  html+='<div style="background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(139,26,26,.1));border:1px solid rgba(168,85,247,.22);border-radius:14px;padding:18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;">';
+  html+='<div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,'+c1+','+c2+');display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;flex-shrink:0;">'+activeProfileMember[0]+'</div>';
+  html+='<div><div style="font-size:1.2rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">'+activeProfileMember+'</div>';
+  html+='<div style="font-size:.68rem;color:var(--muted);margin-top:3px;">'+memberScores.length+' quiz attempt'+(memberScores.length!==1?'s':'')+' · '+passCount+' passed</div></div></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">';
+  html+='<div class="profile-stat"><div class="profile-stat-num" style="color:var(--purple-l)">'+avg+'%</div><div class="profile-stat-lbl">Average</div></div>';
+  html+='<div class="profile-stat"><div class="profile-stat-num" style="color:var(--success)">'+best+'%</div><div class="profile-stat-lbl">Best Score</div></div>';
+  html+='<div class="profile-stat"><div class="profile-stat-num" style="color:var(--warn)">'+Math.round(passCount/memberScores.length*100)+'%</div><div class="profile-stat-lbl">Pass Rate</div></div>';
+  html+='</div>';
+  html+='<div style="font-size:.9rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;">📋 Quiz History</div>';
+  Object.values(byQuiz).forEach(function(qd){
+    var latest=qd.attempts[qd.attempts.length-1];
+    var bestScore=Math.max(...qd.attempts.map(function(a){return a.score;}));
+    var isPassed=latest.passed;
+    var quiz=quizzes.find(function(q){return q.id===qd.quizId;});
+    html+='<div class="profile-quiz-card">';
+    html+='<div class="profile-quiz-header" onclick="toggleProfileSection(this)">';
+    html+='<div><div class="profile-quiz-title">'+qd.title+'</div>';
+    html+='<div style="font-size:.65rem;color:var(--muted);margin-top:3px;">'+qd.attempts.length+' attempt'+(qd.attempts.length!==1?'s':'')+' · Best: '+bestScore+'%  · tap to expand</div></div>';
+    html+='<div class="profile-quiz-score '+(isPassed?'pass':'fail')+'">'+latest.score+'%</div>';
+    html+='</div>';
+    html+='<div style="display:none">';
+    // Failed questions
+    if(quiz&&quiz.questions){
+      var failedQs=[];
+      quiz.questions.forEach(function(q,i){
+        var key=quiz.id+'_'+i;
+        var stat=questionStats[key];
+        if(stat&&stat.wrong>0)failedQs.push({text:q.text,correct:q.options[q.correct],failRate:Math.round(stat.wrong/stat.total*100),wrong:stat.wrong,total:stat.total});
+      });
+      if(failedQs.length){
+        html+='<div style="font-size:.62rem;color:var(--blood-g);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 8px;">⚠ Questions You Struggle With</div>';
+        failedQs.sort(function(a,b){return b.failRate-a.failRate;}).forEach(function(fq){
+          html+='<div class="profile-failed-q">';
+          html+='<div class="profile-failed-q-text">'+fq.text+'</div>';
+          html+='<div class="profile-correct-ans">✓ Correct: '+fq.correct+'</div>';
+          html+='<div style="font-size:.62rem;color:var(--muted);margin-top:3px;">Failed '+fq.wrong+'/'+fq.total+' times ('+fq.failRate+'%)</div>';
+          html+='</div>';
+        });
+      }else{
+        html+='<div style="font-size:.78rem;color:var(--success);padding:8px;text-align:center;">✓ No struggle questions recorded yet!</div>';
+      }
+    }
+    // Score history
+    html+='<div style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 6px;">Score History</div>';
+    qd.attempts.slice().reverse().forEach(function(a){
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:7px;padding:6px 10px;margin-bottom:5px;">';
+      html+='<span style="font-size:.68rem;color:var(--muted);">'+new Date(a.created_at).toLocaleDateString()+'</span>';
+      html+='<span style="font-size:.75rem;font-weight:700;color:'+(a.passed?'var(--success)':'var(--blood-g)')+'">'+a.score+'% '+(a.passed?'✓':'✗')+'</span>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+  });
+  el.innerHTML=html;
+}
+function openMemberProfile(name){
+  activeProfileMember=name;
+  go('profile');
 }
 
 // INIT
