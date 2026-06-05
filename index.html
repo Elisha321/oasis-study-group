@@ -395,6 +395,24 @@ main{flex:1;padding:24px 16px;max-width:1280px;margin:0 auto;width:100%}
 .profile-failed-q-text{font-size:.82rem;font-weight:600;margin-bottom:6px;color:var(--text);line-height:1.4}
 .profile-correct-ans{font-size:.76rem;color:var(--success);font-family:'DM Mono',monospace}
 .profile-expand{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:8px;cursor:pointer;text-align:center;padding:4px}
+
+
+.feature-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;cursor:pointer;position:relative;overflow:hidden;
+  transition:all .3s cubic-bezier(.22,1,.36,1);
+}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.feature-card:nth-child(1)::before{background:linear-gradient(90deg,var(--purple),var(--accent));}
+.feature-card:nth-child(2)::before{background:linear-gradient(90deg,var(--warn),#f59e0b99);}
+.feature-card:nth-child(3)::before{background:linear-gradient(90deg,var(--blood),var(--blood-g));}
+.feature-card:nth-child(4)::before{background:linear-gradient(90deg,var(--success),#34d399);}
+.feature-card:hover{transform:translateY(-6px) scale(1.02);border-color:var(--border2);box-shadow:0 16px 48px rgba(0,0,0,.5);}
+.feature-icon{font-size:1.8rem;margin-bottom:10px;display:block;}
+.feature-title{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px;}
+.feature-desc{font-size:.74rem;color:var(--muted);line-height:1.55;}
+.feature-arrow{position:absolute;bottom:14px;right:14px;color:var(--muted);transition:all .25s;font-size:.85rem;}
+.feature-card:hover .feature-arrow{color:var(--purple-l);transform:translateX(4px);}
 </style>
 </head>
 <body>
@@ -720,8 +738,8 @@ function setSyncing(on,err=false){
   else{d.className='sync-dot';t.textContent='Live';}
 }
 
-const MEMBERS=[{name:'Elisha',role:'Group Lead'},{name:'Charles',role:'Member'},{name:'Nancy',role:'Member'},{name:'Precious',role:'Member'},{name:'Pearl 💗😊',role:'Member'},{name:'Annie',role:'Member'},{name:'Paula',role:'Member'},{name:'Faith',role:'Member'},{name:'Rex',role:'Member'}];
-const COLORS=[['#7c3aed','#a855f7'],['#8b1a1a','#c0392b'],['#1d4ed8','#60a5fa'],['#065f46','#34d399'],['#92400e','#fbbf24'],['#701a75','#e879f9'],['#1e3a5f','#7dd3fc'],['#3b0764','#c084fc'],['#0f4c35','#10b981']];
+const MEMBERS=[{name:'Elisha',role:'Group Lead'},{name:'Charles',role:'Member'},{name:'Precious',role:'Member'},{name:'Annie',role:'Member'},{name:'Paula',role:'Member'},{name:'Faith',role:'Member'},{name:'Ben',role:'Member'}];
+const COLORS=[['#7c3aed','#a855f7'],['#8b1a1a','#c0392b'],['#1d4ed8','#60a5fa'],['#92400e','#fbbf24'],['#701a75','#e879f9'],['#1e3a5f','#7dd3fc'],['#0f4c35','#10b981']];
 const ADMIN_PIN='1206';
 const CUR='₦';
 
@@ -990,6 +1008,7 @@ function pickAns(qi,oi){
 async function submitQuiz(timeout=false){
   clearInterval(timerInt);
   let correct=0;
+  const statsToSave=[];
   activeQuiz.questions.forEach((q,i)=>{
     const ua=userAnswers[i],isC=ua===q.correct;
     if(isC)correct++;
@@ -997,7 +1016,10 @@ async function submitQuiz(timeout=false){
     if(!questionStats[key])questionStats[key]={text:q.text,wrong:0,total:0,quizTitle:activeQuiz.title};
     questionStats[key].total++;
     if(!isC)questionStats[key].wrong++;
+    statsToSave.push({quiz_id:activeQuiz.id,quiz_title:activeQuiz.title,question_index:i,question_text:q.text,correct_answer:q.options[q.correct],player_name:curPlayer,was_correct:isC});
   });
+  // Save to Supabase in background
+  try{await dbP('question_stats',statsToSave);}catch(e){console.error('Stats save failed:',e);}
   const total=activeQuiz.questions.length,pct=Math.round(correct/total*100),passed=pct>=activeQuiz.pass_score;
   if(passed)confetti();
   try{
@@ -1355,7 +1377,18 @@ async function adminClearScores(quizId,title){
 // PROFILE
 let activeProfileMember=MEMBERS[0].name;
 async function loadProfile(){
-  try{if(!scores.length)scores=await dbG('scores','?order=created_at.desc');if(!quizzes.length)quizzes=await dbG('quizzes','?order=created_at.desc');}catch(e){}
+  try{
+    if(!scores.length)scores=await dbG('scores','?order=created_at.desc');
+    if(!quizzes.length)quizzes=await dbG('quizzes','?order=created_at.desc');
+    // Load question stats from Supabase and merge into questionStats
+    const dbStats=await dbG('question_stats','?order=created_at.desc');
+    dbStats.forEach(function(s){
+      const key=s.quiz_id+'_'+s.question_index;
+      if(!questionStats[key])questionStats[key]={text:s.question_text,wrong:0,total:0,quizTitle:s.quiz_title,correctAnswer:s.correct_answer};
+      questionStats[key].total++;
+      if(!s.was_correct)questionStats[key].wrong++;
+    });
+  }catch(e){console.error('Profile load error:',e);}
   const tabsEl=document.getElementById('profile-member-tabs');
   tabsEl.innerHTML=MEMBERS.map(m=>`<button class="profile-tab ${m.name===activeProfileMember?'active':''}" onclick="selectProfileMember('${m.name.replace(/'/g,"\\\\'")}'">${m.name}</button>`).join('');
   renderProfileContent();
@@ -1443,6 +1476,8 @@ function openMemberProfile(name){
   activeProfileMember=name;
   go('profile');
 }
+
+
 
 // INIT
 populateSelects();renderMembers();updatePomD();updatePomDots();loadQuizzes();
