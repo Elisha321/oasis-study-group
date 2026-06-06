@@ -695,7 +695,13 @@ C</span></div>
   <div class="admin-box">
     <div class="admin-hdr"><div class="admin-ttl">🔐 Admin — Elisha Only</div><button class="modal-close" onclick="document.getElementById('admin-modal').classList.remove('open')">✕</button></div>
     <div class="modal-body">
-      <div class="admin-sec-title" style="margin-top:0">💸 Fee Management</div>
+      <div class="admin-sec-title" style="margin-top:0">👥 Manage Members</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-end">
+        <div style="flex:1"><div class="form-label">New Member Name</div><input class="admin-input" id="new-member-name" style="width:100%" placeholder="Enter name..."/></div>
+        <button class="btn btn-success btn-sm" onclick="adminAddMember()">+ Add</button>
+      </div>
+      <div id="admin-member-list"></div>
+      <div class="admin-sec-title">💸 Fee Management</div>
       <div id="admin-fee-list"></div>
       <div class="admin-sec-title">🗑 Delete Quiz</div>
       <div id="admin-quiz-list"></div>
