@@ -1448,16 +1448,32 @@ function renderProfileContent(){
         if(stat&&stat.wrong>0)failedQs.push({text:q.text,correct:q.options[q.correct],failRate:Math.round(stat.wrong/stat.total*100),wrong:stat.wrong,total:stat.total});
       });
       if(failedQs.length){
-        html+='<div style="font-size:.62rem;color:var(--blood-g);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 8px;">⚠ Questions You Struggle With</div>';
-        failedQs.sort(function(a,b){return b.failRate-a.failRate;}).forEach(function(fq){
+        html+='<div style="font-size:.62rem;color:var(--blood-g);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 8px;">⚠ Questions You Failed — Study These!</div>';
+        failedQs.sort(function(a,b){return b.failRate-a.failRate;}).forEach(function(fq,fi){
           html+='<div class="profile-failed-q">';
+          html+='<div style="font-size:.6rem;color:var(--blood-g);font-family:monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">Failed '+fq.wrong+'/'+fq.total+' times · '+fq.failRate+'% fail rate</div>';
           html+='<div class="profile-failed-q-text">'+fq.text+'</div>';
-          html+='<div class="profile-correct-ans">✓ Correct: '+fq.correct+'</div>';
-          html+='<div style="font-size:.62rem;color:var(--muted);margin-top:3px;">Failed '+fq.wrong+'/'+fq.total+' times ('+fq.failRate+'%)</div>';
+          // Show all options if available
+          if(fq.options&&fq.options.length){
+            html+='<div style="display:flex;flex-direction:column;gap:5px;margin:8px 0">';
+            fq.options.forEach(function(o,oi){
+              var isCorrect = oi===fq.correctIdx;
+              var bg = isCorrect?'rgba(16,185,129,.15)':'rgba(255,255,255,.03)';
+              var border = isCorrect?'1px solid rgba(16,185,129,.4)':'1px solid rgba(255,255,255,.08)';
+              var col = isCorrect?'var(--success)':'var(--muted)';
+              html+='<div style="background:'+bg+';border:'+border+';border-radius:7px;padding:7px 11px;font-size:.78rem;color:'+col+';display:flex;align-items:center;gap:8px;">';
+              html+='<span style="font-family:monospace;font-size:.68rem;width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,.07);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">'+['A','B','C','D'][oi]+'</span>';
+              html+=o+(isCorrect?' ✓':'');
+              html+='</div>';
+            });
+            html+='</div>';
+          } else {
+            html+='<div class="profile-correct-ans" style="margin-top:6px">✓ Correct answer: '+fq.correct+'</div>';
+          }
           html+='</div>';
         });
       }else{
-        html+='<div style="font-size:.78rem;color:var(--success);padding:8px;text-align:center;">✓ No struggle questions recorded yet!</div>';
+        html+='<div style="font-size:.78rem;color:var(--success);padding:8px;text-align:center;">✓ No failed questions recorded yet — keep it up!</div>';
       }
     }
     // Score history
@@ -1478,6 +1494,26 @@ function openMemberProfile(name){
 }
 
 
+
+function adminAddMember(){
+  const name=document.getElementById('new-member-name').value.trim();
+  if(!name){toast('Enter a name','error');return;}
+  if(MEMBERS.find(m=>m.name===name)){toast('Member already exists','error');return;}
+  MEMBERS.push({name,role:'Member'});
+  COLORS.push(['#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'),'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0')]);
+  document.getElementById('new-member-name').value='';
+  populateSelects();renderMembers();renderAdminPanel();
+  toast(name+' added to the group! 🎉');
+}
+function adminRemoveMember(name){
+  if(!confirm('Remove '+name+' from the group?'))return;
+  const idx=MEMBERS.findIndex(m=>m.name===name);
+  if(idx===-1)return;
+  MEMBERS.splice(idx,1);
+  COLORS.splice(idx,1);
+  populateSelects();renderMembers();renderAdminPanel();
+  toast(name+' removed from the group');
+}
 
 // INIT
 populateSelects();renderMembers();updatePomD();updatePomDots();loadQuizzes();
