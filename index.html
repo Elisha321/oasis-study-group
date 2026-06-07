@@ -948,6 +948,9 @@ function renderQuizzes(){
 function startQuiz(id){
   activeQuiz=quizzes.find(q=>q.id===id);if(!activeQuiz)return;
   document.getElementById('pre-quiz-name').textContent=activeQuiz.title;
+  // Repopulate names freshly every time
+  const sel=document.getElementById('pre-player');
+  if(sel){sel.innerHTML='<option value="">— Choose your name —</option>'+MEMBERS.map(m=>'<option value="'+m.name+'">'+m.name+'</option>').join('');}
   document.getElementById('pre-player').value='';
   document.getElementById('pre-modal').classList.add('open');
 }
