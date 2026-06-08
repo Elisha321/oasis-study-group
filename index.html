@@ -672,7 +672,7 @@ C</span></div>
 <!-- QUIZ MODAL -->
 <div class="modal-overlay" id="quiz-modal">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title" id="quiz-modal-title">Quiz</div><button class="modal-close" onclick="closeQuiz()">✕</button></div>
+    <div class="modal-hdr"><div class="modal-title" id="quiz-modal-title">Quiz</div><button class="modal-close" onclick="closeQuizModal()">✕</button></div>
     <div class="modal-body" id="quiz-modal-body"></div>
   </div>
 </div>
@@ -964,8 +964,8 @@ function beginQuiz(){
   document.getElementById('quiz-modal').classList.add('open');
   renderQuizQs();startTimer();
 }
-function closeQuiz(){clearInterval(timerInt);document.getElementById('quiz-modal').classList.remove('open');activeQuiz=null;}
-function startTimer(){clearInterval(timerInt);updateTimer();timerInt=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0){clearInterval(timerInt);submitQuiz(true);}},1000);}
+function closeQuiz(){clearInterval(timerInterval);document.getElementById('quiz-modal').classList.remove('open');activeQuiz=null;}
+function startTimer(){clearInterval(timerInterval);updateTimer();timerInt=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0){clearInterval(timerInterval);submitQuiz(true);}},1000);}
 function updateTimer(){const el=document.getElementById('timer-el');if(!el)return;const m=Math.floor(timeLeft/60),s=timeLeft%60;el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');el.className='timer'+(timeLeft<60?' danger':timeLeft<180?' warning':'');}
 function renderQuizQs(){
   const pct=Object.keys(userAnswers).length/activeQuiz.questions.length*100;
@@ -1015,7 +1015,7 @@ function pickAns(qi,oi){
   }
 }
 async function submitQuiz(timeout=false){
-  clearInterval(timerInt);
+  clearInterval(timerInterval);
   let correct=0;
   const statsToSave=[];
   activeQuiz.questions.forEach((q,i)=>{
@@ -1032,7 +1032,7 @@ async function submitQuiz(timeout=false){
   const total=activeQuiz.questions.length,pct=Math.round(correct/total*100),passed=pct>=activeQuiz.pass_score;
   if(passed)confetti();
   try{
-    await dbPost('scores',{quiz_id:activeQuiz.id,quiz_title:activeQuiz.title,player_name:pendingPlayer,score:pct,correct,total,passed});
+    await dbPost('scores',{quiz_id:activeQuiz.id,quiz_title:activeQuiz.title,player_name:curPlayer,score:pct,correct,total,passed});
     toast(pendingPlayer+' — score saved! 🏆');
   }catch(e){toast('Score could not save','error');}
   document.getElementById('quiz-modal-body').innerHTML=`
@@ -1049,7 +1049,7 @@ async function submitQuiz(timeout=false){
     </div>
     <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:.86rem;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Answer Review</div>
     <div class="rev-list">${activeQuiz.questions.map((q,i)=>{const ua=userAnswers[i],isC=ua===q.correct;return`<div class="rev-item ${isC?'ca':'wa'}"><div class="rev-q">${i+1}. ${q.text}</div><div class="rev-opts">${q.options.map((o,oi)=>{let cl='no';if(oi===q.correct)cl='co';else if(oi===ua&&!isC)cl='wo';return`<div class="rev-opt ${cl}">${['A','B','C','D'][oi]}. ${o}${oi===q.correct?' ✓':''}${oi===ua&&!isC?' ✗':''}</div>`;}).join('')}</div></div>`;}).join('')}</div>
-    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:12px" onclick="closeQuiz()">Close</button>`;
+    <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:12px" onclick="closeQuizModal()">Close</button>`;
 }
 
 // LEADERBOARD
@@ -1302,9 +1302,9 @@ function shuffleFC(){fcCards.sort(()=>Math.random()-.5);fcIdx=0;updateFC();toast
 function resetFC(){fcIdx=0;updateFC();}
 
 // POMODORO
-function togglePom(){if(pomRunning){clearInterval(pomInt);pomRunning=false;document.getElementById('pom-btn').textContent='▶ Resume';}else{pomRunning=true;document.getElementById('pom-btn').textContent='⏸ Pause';pomInt=setInterval(tickPom,1000);}}
-function tickPom(){pomTime--;updatePomD();if(pomTime<=0){clearInterval(pomInt);pomRunning=false;if(!pomIsBreak){pomSess++;pomIsBreak=true;pomTime=5*60;pomTotal=5*60;toast('Break time! 🌿','info');}else{pomIsBreak=false;pomTime=25*60;pomTotal=25*60;toast('Back to it! 💪');}document.getElementById('pom-btn').textContent='▶ Start';updatePomD();updatePomDots();}}
-function resetPom(){clearInterval(pomInt);pomRunning=false;pomIsBreak=false;pomTime=25*60;pomTotal=25*60;document.getElementById('pom-btn').textContent='▶ Start';updatePomD();}
+function togglePom(){if(pomRunning){clearInterval(pomInterval);pomRunning=false;document.getElementById('pom-btn').textContent='▶ Resume';}else{pomRunning=true;document.getElementById('pom-btn').textContent='⏸ Pause';pomInterval=setInterval(tickPom,1000);}}
+function tickPom(){pomTime--;updatePomD();if(pomTime<=0){clearInterval(pomInterval);pomRunning=false;if(!pomIsBreak){pomSess++;pomIsBreak=true;pomTime=5*60;pomTotal=5*60;toast('Break time! 🌿','info');}else{pomIsBreak=false;pomTime=25*60;pomTotal=25*60;toast('Back to it! 💪');}document.getElementById('pom-btn').textContent='▶ Start';updatePomD();updatePomDots();}}
+function resetPom(){clearInterval(pomInterval);pomRunning=false;pomIsBreak=false;pomTime=25*60;pomTotal=25*60;document.getElementById('pom-btn').textContent='▶ Start';updatePomD();}
 function updatePomD(){const m=Math.floor(pomTime/60),s=pomTime%60;document.getElementById('pom-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('pom-lbl').textContent=pomIsBreak?'Break Time 🌿':'Study Session';document.getElementById('pom-mode').textContent=pomIsBreak?'Break':'Focus Time';document.getElementById('pom-mode').className='pom-mode '+(pomIsBreak?'brk':'study');document.getElementById('pom-ring').className='pom-ring'+(pomIsBreak?' brk':'');document.getElementById('pom-sess').textContent=pomSess;document.getElementById('pom-circle').style.strokeDashoffset=424*(1-pomTime/pomTotal);}
 function updatePomDots(){document.getElementById('pom-dots').innerHTML=Array.from({length:4},(_,i)=>`<div class="pom-dot ${i<pomSess?'done':''}"></div>`).join('');}
 
@@ -1316,10 +1316,10 @@ function openAdmin(){
     if(pin!==ADMIN_PIN){toast('Wrong PIN','error');return;}
     adminUnlocked=true;toast('Admin access granted 🔐');
   }
-  renderAdmin();
+  renderAdminPanel();
   document.getElementById('admin-modal').classList.add('open');
 }
-function renderAdmin(){
+function renderAdminPanel(){
   // Fee management
   document.getElementById('admin-fee-list').innerHTML=MEMBERS.map((m,i)=>{
     const[c1,c2]=COLORS[i];const d=feesData[m.name]||{balance:0};const bal=Number(d.balance)||0;
@@ -1355,7 +1355,7 @@ async function adminSetBal(name,i){
     if(ex)await dbPatch('fees',{balance:val,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
     else await dbPost('fees',{member_name:name,balance:val});
     toast(name+'\'s balance set to ₦'+val.toFixed(2));document.getElementById('adm-fi-'+i).value='';
-    await loadFees();renderAdmin();
+    await loadFees();renderAdminPanel();
   }catch(e){toast('Failed','error');}
 }
 async function adminClearBal(name){
@@ -1364,22 +1364,22 @@ async function adminClearBal(name){
     const ex=feesData[name];
     if(ex)await dbPatch('fees',{balance:0,updated_at:new Date().toISOString()},'?member_name=eq.'+name);
     else await dbPost('fees',{member_name:name,balance:0});
-    toast(name+'\'s balance cleared ✓');await loadFees();renderAdmin();
+    toast(name+'\'s balance cleared ✓');await loadFees();renderAdminPanel();
   }catch(e){toast('Failed','error');}
 }
 async function adminClearLogs(name){
   if(!confirm('Delete ALL fee history for '+name+'?'))return;
-  try{await dbDelete('fee_logs','?member_name=eq.'+name);toast('History cleared ✓');await loadFees();renderAdmin();}
+  try{await dbDelete('fee_logs','?member_name=eq.'+name);toast('History cleared ✓');await loadFees();renderAdminPanel();}
   catch(e){toast('Failed','error');}
 }
 async function adminDelQuiz(id,title){
   if(!confirm('Delete quiz "'+title+'"?'))return;
-  try{await dbDelete('quizzes','?id=eq.'+id);await dbDelete('scores','?quiz_id=eq.'+id);toast('Quiz deleted ✓');await loadQuizzes();renderAdmin();}
+  try{await dbDelete('quizzes','?id=eq.'+id);await dbDelete('scores','?quiz_id=eq.'+id);toast('Quiz deleted ✓');await loadQuizzes();renderAdminPanel();}
   catch(e){toast('Failed','error');}
 }
 async function adminClearScores(quizId,title){
   if(!confirm('Clear ALL scores for "'+title+'"?'))return;
-  try{await dbDelete('scores','?quiz_id=eq.'+quizId);toast('Scores cleared ✓');await loadLeaderboard();renderAdmin();}
+  try{await dbDelete('scores','?quiz_id=eq.'+quizId);toast('Scores cleared ✓');await loadLeaderboard();renderAdminPanel();}
   catch(e){toast('Failed','error');}
 }
 
